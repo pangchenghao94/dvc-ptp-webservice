@@ -4,9 +4,12 @@ use \Psr\Http\Message\ResponseInterface as Response;
 
 $app = new \Slim\App(['settings' => ['displayErrorDetails' => true]]);
 
+// 1 = sucess
+// 2 = password mismatch
+// 3 = unexpected error
 $app->post('/api/login',function(Request $request, Response $response){
     $data = json_decode($request->getBody());
-    $sql = "SELECT `user_id`, `usertype`, `username` FROM `user` WHERE `username`=:username AND `password`=:password";
+    $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` WHERE `username`=:username AND `password`=:password";
     $db = new db(); 
     try {
         //get DB object and connect
@@ -29,15 +32,21 @@ $app->post('/api/login',function(Request $request, Response $response){
         
         if($userData){
             $userData = json_encode($userData);
-            echo '{"userData": ' .$userData . '}';
+            echo '{ "status": "1",
+                    "data"  : ' .$userData . ' }
+                ';
         } 
         
         else {
-            echo '{"error":{"text":"Bad request wrong username and password"}}';
+            echo '{ "status"    : "2",
+                    "message"   : "Bad request wrong username and password" }
+                ';
         }  
     }
     catch(PDOException $e) {
-        echo '{"error":{"text":'. $e->getMessage() .'}}';
+        echo '{ "status"    : "3",
+                "message"   : '. $e->getMessage() .' }
+        ';
     }
     finally{ $db = null; }
 });
@@ -127,50 +136,63 @@ $app->post('/api/checkUniqueUsername', function(Request $request, Response $resp
 });
 
 //Add user
+// 1 = sucess
+// 2 = password mismatch
+// 3 = unexpected error
 $app->post('/api/user/add', function(Request $request, Response $response){
     $db = new db();    
     $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
     
-    try{
-        //get DB object and connect
-        $db = $db->connect();
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
 
-        //prepare state and execute     
-        $sql = "INSERT INTO user 
-                (`username`, `password`, `full_name`, `phone_no`, `email`, `gender`, `usertype`) 
-                VALUES
-                (:username, :password, :full_name, :phone_no, :email, :gender, :usertype)";
+            //prepare state and execute     
+            $sql = "INSERT INTO user 
+                    (`username`, `password`, `full_name`, `phone_no`, `email`, `gender`, `usertype`) 
+                    VALUES
+                    (:username, :password, :full_name, :phone_no, :email, :gender, :usertype)";
 
-        $stmt = $db->prepare($sql);
-        $pass = md5($data->password);
-        $stmt->bindParam(':username', $data->username, PDO::PARAM_STR);
-        $stmt->bindParam(':password', $pass, PDO::PARAM_STR);
-        $stmt->bindParam(':full_name', $data->full_name, PDO::PARAM_STR);
-        $stmt->bindParam(':phone_no', $data->phone_no, PDO::PARAM_STR);
-        $stmt->bindParam(':email', $data->email, PDO::PARAM_STR);
-        $stmt->bindParam(':gender', $data->gender, PDO::PARAM_INT);
-        $stmt->bindParam(':usertype', $data->usertype, PDO::PARAM_INT);
-        
-        $stmt->execute();
+            $stmt = $db->prepare($sql);
+            $pass = md5($data->data->password);
+            $stmt->bindParam(':username', $data->data->username, PDO::PARAM_STR);
+            $stmt->bindParam(':password', $pass, PDO::PARAM_STR);
+            $stmt->bindParam(':full_name', $data->data->full_name, PDO::PARAM_STR);
+            $stmt->bindParam(':phone_no', $data->data->phone_no, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $data->data->email, PDO::PARAM_STR);
+            $stmt->bindParam(':gender', $data->data->gender, PDO::PARAM_INT);
+            $stmt->bindParam(':usertype', $data->data->usertype, PDO::PARAM_INT);
+            
+            $stmt->execute();
 
-        $sql = "SELECT LAST_INSERT_ID() AS id";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();        
+            $sql = "SELECT LAST_INSERT_ID() AS id";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();        
 
-        $users = $stmt->fetch(PDO::FETCH_OBJ);
-        echo json_encode($users);
+            $users = $stmt->fetch(PDO::FETCH_OBJ);
+            echo json_encode($users);
+        }
+        catch(PDOException $e){
+            echo '{ "error": {"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
     }
-    catch(PDOException $e){
-        echo '{ "error": {"text": '.$e->getMessage().'}}';
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
     }
-    finally{ $db = null; }
 });
 
 //Update user by id
 $app->post('/api/user/update/{id}', function(Request $request, Response $response){
     $db = new db();    
     $data = json_decode($request->getBody());
-
+    
     try{
         //get DB object and connect
         $db = $db->connect();
