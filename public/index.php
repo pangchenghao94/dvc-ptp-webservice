@@ -13,6 +13,9 @@ if ($http_origin == "http://localhost:4200" || $http_origin == "http://localhost
     header("Access-Control-Allow-Origin: $http_origin");
 }
 
+//allow all access
+//header("Access-Control-Allow-Origin:*");
+
 header('Access-Control-Allow-Headers: content-type');
 
 $app = new \Slim\App;
