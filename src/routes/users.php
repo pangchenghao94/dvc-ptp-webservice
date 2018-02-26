@@ -87,25 +87,39 @@ $app->get('/api/userlist', function(Request $request, Response $response){
 
 //Get user by id
 $app->get('/api/user/{id}', function(Request $request, Response $response){
-    $db = new db();    
-    try{
-        //get DB object and connect
-        $db = $db->connect();
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
 
-        //prepare state and execute
-        $id = $request->getAttribute('id');
-        $sql = "SELECT * FROM `user` WHERE `user_id` = :id";
-        $stmt = $db->prepare($sql);
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
 
-        $users = $stmt->fetch(PDO::FETCH_OBJ);
-        echo json_encode($users);
+            //prepare state and execute
+            $id = $request->getAttribute('id');
+            $sql = "SELECT `username`, `state`, `full_name`, `phone_no`, `email`, `gender` FROM `user` WHERE `user_id` = :id";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            $user = $stmt->fetch(PDO::FETCH_OBJ);
+            echo '{ "status": "1",
+                    "data"  : ' .$user . ' }
+            ';
+        }
+        catch(PDOException $e){
+            echo '{"error" : { "text": '.$e->getMessage().' }}';
+        }
+        finally{ $db = null; }
     }
-    catch(PDOException $e){
-        echo '{"error":{"text": '.$e->getMessage().'}}';
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
     }
-    finally{ $db = null; }
 });
 
 
