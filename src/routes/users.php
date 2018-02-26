@@ -2,8 +2,6 @@
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
-$app = new \Slim\App(['settings' => ['displayErrorDetails' => true]]);
-
 // 1 = sucess
 // 2 = password mismatch
 // 3 = unexpected error
