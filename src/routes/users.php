@@ -345,3 +345,57 @@ $app->get('/api/fullNameList', function(Request $request, Response $response){
     }
     finally{ $db = null; }
 });
+
+//Get user list
+$app->post('/api/user/changePassword', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $sql = "SELECT `password` FROM `user` WHERE `user_id` = :user_id";
+            $stmt = $db->prepare($sql);
+
+            $password = md5($data->data->oldPass); 
+            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
+            $stmt->execute();
+            $db_pass = $stmt->fetch(PDO::FETCH_OBJ);
+            
+            if(!empty($db_pass)){
+                if($db_pass->password == $password){
+                    $sql = "UPDATE `user` SET `password` = :password WHERE `user_id` = :user_id";
+                    $stmt = $db->prepare($sql);   
+                    $newPass = md5($data->data->newPassRepeat);
+                    $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
+                    $stmt->bindParam(':password', $newPass, PDO::PARAM_STR);                                    
+                    $stmt->execute();
+
+                    echo '{ "status"    : "1",
+                            "message"   : "Update Successfully" }
+                    ';
+                }
+                else{
+                    echo '{ "status"    : "2",
+                            "message"   : "Bad request, you have entered the wrong existing password" }
+                    ';
+                }
+            }
+        }
+        catch(PDOException $e){
+            echo '{"error":{"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+});
+
