@@ -65,7 +65,7 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
     }
 });
 
-//Get user list
+//Get assignment list
 $app->post('/api/assignment/assignmentList', function(Request $request, Response $response){
     $db = new db();
     $data = json_decode($request->getBody());
@@ -82,6 +82,44 @@ $app->post('/api/assignment/assignmentList', function(Request $request, Response
             $stmt = $db->query($sql);
             $users = $stmt->fetchAll(PDO::FETCH_OBJ);
             echo json_encode($users);
+        }
+        catch(PDOException $e){
+            echo '{"error":{"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+});
+
+//Get assignment from assignment_id
+$app->post('/api/assignment/get/{id}', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            
+            //execute statement
+            $sql = "SELECT * FROM `assignment` WHERE `assignment_id` = :assignment_id";
+            
+            $stmt = $db->prepare($sql);
+            $assignment_id = $request->getAttribute('id');            
+            $stmt->bindParam(':assignment_id', $assignment_id, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $assignment = $stmt->fetch(PDO::FETCH_OBJ);
+            echo '{ "status": "1",
+                    "data"  : ' .json_encode($assignment). ' }
+            ';
         }
         catch(PDOException $e){
             echo '{"error":{"text": '.$e->getMessage().'}}';

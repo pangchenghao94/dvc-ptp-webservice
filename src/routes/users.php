@@ -81,7 +81,7 @@ $app->post('/api/userlist', function(Request $request, Response $response){
             $db = $db->connect();
             
             //execute statement
-            $sql = "SELECT `user_id`, `full_name`, `usertype`, `phone_no`, `state` FROM `user` WHERE `user_id` != :user_id";
+            $sql = "SELECT `user_id`, `full_name`, `usertype`, `phone_no`, `state` FROM `user` WHERE `user_id` != :user_id AND `usertype` != 0";
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);            
             $stmt->execute();
@@ -346,7 +346,7 @@ $app->get('/api/fullNameList', function(Request $request, Response $response){
     finally{ $db = null; }
 });
 
-//Get user list
+//Change password
 $app->post('/api/user/changePassword', function(Request $request, Response $response){
     $db = new db();
     $data = json_decode($request->getBody());
@@ -399,3 +399,46 @@ $app->post('/api/user/changePassword', function(Request $request, Response $resp
     }
 });
 
+//Get user full name by user_id
+$app->post('/api/user/getFullName', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $sql = "SELECT `full_name` FROM `user` WHERE `user_id` = :user_id";
+            $stmt = $db->prepare($sql);
+
+            $stmt->bindParam(':user_id', $data->data->user_id, PDO::PARAM_STR);
+            $stmt->execute();
+            $full_name = $stmt->fetch(PDO::FETCH_OBJ);
+            $full_name = json_encode($full_name);
+
+            if(!empty($full_name)){
+                echo '{ "status"    : "1",
+                        "data"      : '. $full_name .'}
+                ';
+            }
+            else{
+                echo '{ "status"    : "1",
+                        "data"      : "Bad request, user_id does not exist."}
+                ';
+            }
+        }
+        catch(PDOException $e){
+            echo '{"error":{"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+});
