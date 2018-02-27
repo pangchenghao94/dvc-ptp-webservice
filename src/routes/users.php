@@ -79,10 +79,13 @@ $app->post('/api/userlist', function(Request $request, Response $response){
         try{
             //get DB object and connect
             $db = $db->connect();
+            
             //execute statement
-            $sql = "SELECT `user_id`, `full_name`, `usertype`, `phone_no`, `state` FROM `user` WHERE `user_id` <> :user_id";
-            $stmt = $db->query($sql);
-            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);            
+            $sql = "SELECT `user_id`, `full_name`, `usertype`, `phone_no`, `state` FROM `user` WHERE `user_id` != :user_id";
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);            
+            $stmt->execute();
+
             $users = $stmt->fetchAll(PDO::FETCH_OBJ);
             echo '{ "status": "1",
                     "data"  : ' .json_encode($users). ' }
