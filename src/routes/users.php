@@ -400,7 +400,7 @@ $app->post('/api/user/changePassword', function(Request $request, Response $resp
 });
 
 //Get user full name by user_id
-$app->post('/api/user/getFullName', function(Request $request, Response $response){
+$app->post('/api/user/getFullName/{id}', function(Request $request, Response $response){
     $db = new db();
     $data = json_decode($request->getBody());
     $token = $data->token;
@@ -415,13 +415,15 @@ $app->post('/api/user/getFullName', function(Request $request, Response $respons
             $sql = "SELECT `full_name` FROM `user` WHERE `user_id` = :user_id";
             $stmt = $db->prepare($sql);
 
-            $stmt->bindParam(':user_id', $data->data->user_id, PDO::PARAM_STR);
+            $id = $request->getAttribute('id');            
+            $stmt->bindParam(':user_id', $id, PDO::PARAM_STR);
             $stmt->execute();
             $full_name = $stmt->fetch(PDO::FETCH_OBJ);
             $full_name = json_encode($full_name);
 
             if(!empty($full_name)){
                 echo '{ "status"    : "1",
+                        "testing"   : '. $id .',
                         "data"      : '. $full_name .'}
                 ';
             }
