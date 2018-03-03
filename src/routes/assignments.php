@@ -2,7 +2,7 @@
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
-//Add user
+//Add assignment
 // 1 = sucess
 // 3 = unexpected error
 $app->post('/api/assignment/add', function(Request $request, Response $response){
@@ -25,7 +25,7 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
 
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);
-            $stmt->bindParam(':team', $data->data->team, PDO::PARAM_INT);            
+            $stmt->bindParam(':team', $data->data->team, PDO::PARAM_STR);            
             $stmt->bindParam(':address', $data->data->address, PDO::PARAM_STR);
             $stmt->bindParam(':remark', $data->data->remark, PDO::PARAM_STR);
             $stmt->bindParam(':date', $data->data->date, PDO::PARAM_STR);
@@ -65,6 +65,84 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
     }
 });
 
+//Update assignment
+// 1 = sucess
+// 3 = unexpected error
+$app->post('/api/assignment/update', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+
+            // //Upate the assignment table   
+            $sql = "UPDATE `assignment` SET 
+                        `team` = :team,
+                        `address` = :address,
+                        `remark` = :remark,
+                        `date` = :date,
+                        `postcode` = :postcode,
+                        `edited_by` = :edited_by
+                    WHERE `assignment_id` = :assignment_id";
+
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':team', $data->data->team, PDO::PARAM_STR);            
+            $stmt->bindParam(':address', $data->data->address, PDO::PARAM_STR);
+            $stmt->bindParam(':remark', $data->data->remark, PDO::PARAM_STR);
+            $stmt->bindParam(':date', $data->data->date, PDO::PARAM_STR);
+            $stmt->bindParam(':postcode', $data->data->postcode, PDO::PARAM_STR);
+            $stmt->bindParam(':edited_by', $data->user_id, PDO::PARAM_INT);
+            $stmt->bindParam(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);            
+            
+            $stmt->execute();
+
+            $user_ids = implode(',',$data->data2);
+
+            //update the assignment_admin table
+            $sql = "DELETE FROM `assignment_admin`
+                    WHERE `user_id` NOT IN (";
+            $comma = '';
+            for($i = 0; $i < count($data->data2); $i++){
+                $sql .= $comma . ':user_id_' . $i;
+                $comma = ',';
+            }
+            $sql .= ") AND `assignment_id` = :assignment_id";
+
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);                
+            for($i = 0; $i < count($data->data2); $i++){
+                $stmt->bindParam(':user_id_' . $i, $data->data2[$i]);
+            }
+            $stmt->execute();
+
+            foreach($data->data2 as $row){
+                $sql = "INSERT IGNORE INTO `assignment_admin` (`user_id`, `assignment_id`) VALUES (:user_id, :assignment_id)";
+                $stmt = $db->prepare($sql);
+                $stmt->bindParam(':user_id', $row, PDO::PARAM_INT);
+                $stmt->bindParam(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);
+                $stmt->execute();   
+            }
+
+            echo '{ "status": "1" }';
+        }
+        catch(PDOException $e){
+            echo '{ "error": {"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+});
+
 //Get assignment list
 $app->post('/api/assignment/assignmentList', function(Request $request, Response $response){
     $db = new db();
@@ -78,7 +156,7 @@ $app->post('/api/assignment/assignmentList', function(Request $request, Response
             //get DB object and connect
             $db = $db->connect();
             //execute statement
-            $sql = "SELECT `assignment_id`, `address`, `team`, `postcode`, `date` FROM `assignment`";
+            $sql = "SELECT `assignment_id`, `address`, `team`, `postcode`, `date` FROM `assignment` WHERE `deleted_date` IS NULL";
             $stmt = $db->query($sql);
             $users = $stmt->fetchAll(PDO::FETCH_OBJ);
             echo json_encode($users);
@@ -109,7 +187,11 @@ $app->post('/api/assignment/get/{id}', function(Request $request, Response $resp
             $db = $db->connect();
             
             //execute statement
-            $sql = "SELECT * FROM `assignment` WHERE `assignment_id` = :assignment_id";
+            $sql = "SELECT `a`.*, `u`.`full_name` 
+                    FROM `assignment` as `a` 
+                    INNER JOIN `user` AS `u` 
+                        ON `a`.`user_id` = `u`.`user_id` 
+                    WHERE `assignment_id` = :assignment_id";
             
             $stmt = $db->prepare($sql);
             $assignment_id = $request->getAttribute('id');            
@@ -120,6 +202,83 @@ $app->post('/api/assignment/get/{id}', function(Request $request, Response $resp
             echo '{ "status": "1",
                     "data"  : ' .json_encode($assignment). ' }
             ';
+        }
+        catch(PDOException $e){
+            echo '{"error":{"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+});
+
+//delete assignment
+$app->post('/api/assignment/delete/{id}', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+
+            //prepare state and execute       .
+            $assignment_id = $request->getAttribute('id');    
+            $sql = "UPDATE `assignment` SET `deleted_date` = SYSDATE(), `deleted_by` = :user_id WHERE `assignment_id` = :assignment_id";
+            $stmt = $db->prepare($sql);        
+            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);                    
+            $stmt->bindParam(':assignment_id', $assignment_id, PDO::PARAM_STR);        
+            $stmt->execute();
+
+            echo '{ "status": "1" }';
+        }
+        catch(PDOException $e){
+            echo '{ "error": {"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+
+});
+
+//Get assignment list
+$app->post('/api/assignment_admin/getList/{id}', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $assignment_id = $request->getAttribute('id');
+
+            $sql = "SELECT `a`.`user_id`, `u`.`full_name` 
+                    FROM `assignment_admin` AS `a` 
+                    INNER JOIN `user` AS `u` 
+                        ON `a`.`user_id` = `u`.`user_id` 
+                    WHERE `a`.`assignment_id` = :assignment_id";
+                    
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':assignment_id', $assignment_id, PDO::PARAM_INT);        
+            $stmt->execute();
+            $assignment_admin = json_encode($stmt->fetchAll(PDO::FETCH_OBJ));
+            
+            echo '{ "status": "1",
+                    "data"  : '. $assignment_admin.' }';
         }
         catch(PDOException $e){
             echo '{"error":{"text": '.$e->getMessage().'}}';

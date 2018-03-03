@@ -297,7 +297,7 @@ $app->get('/api/user/deactivate/{id}', function(Request $request, Response $resp
     finally{ $db = null; }
 });
 
-//Deactivate user
+//Activate user
 $app->get('/api/user/activate/{id}', function(Request $request, Response $response){
     $db = new db();    
 
