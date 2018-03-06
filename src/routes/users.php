@@ -49,6 +49,54 @@ $app->post('/api/login',function(Request $request, Response $response){
     finally{ $db = null; }
 });
 
+// 1 = sucess
+// 2 = password mismatch
+// 3 = unexpected error
+$app->post('/api/mobileLogin',function(Request $request, Response $response){
+    $data = json_decode($request->getBody());
+    $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` 
+            WHERE `username`=:username AND `password`=:password AND (`usertype`='2' OR `usertype`='3')";
+    $db = new db(); 
+    try {
+        //get DB object and connect
+        $db = $db->connect();
+
+        $userData ='';
+        $stmt = $db->prepare($sql);
+        $password = md5($data->password);   
+    
+        $stmt->bindParam("username", $data->username, PDO::PARAM_STR);
+        $stmt->bindParam("password", $password, PDO::PARAM_STR);
+        $stmt->execute();
+
+        $userData = $stmt->fetch(PDO::FETCH_OBJ);
+        
+        if(!empty($userData)){
+            $user_id=$userData->user_id;
+            $userData->token = apiToken($user_id);
+        }
+        
+        if($userData){
+            $userData = json_encode($userData);
+            echo '{ "status": "1",
+                    "data"  : ' .$userData . ' }
+                ';
+        } 
+        
+        else {
+            echo '{ "status"    : "2",
+                    "message"   : "Bad request wrong username and password" }
+                ';
+        }  
+    }
+    catch(PDOException $e) {
+        echo '{ "status"    : "3",
+                "message"   : '. $e->getMessage() .' }
+        ';
+    }
+    finally{ $db = null; }
+});
+
 //Get all users
 $app->get('/api/users', function(Request $request, Response $response){
     $db = new db();                

@@ -291,3 +291,59 @@ $app->post('/api/assignment_admin/getList/{id}', function(Request $request, Resp
         ';
     }
 });
+
+//Get assignment list
+$app->post('/api/assignment/getPDKAssignmentList', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get the assignment ids dated today
+            $db = $db->connect();
+            $sql = "SELECT `assignment_id` FROM `assignment` WHERE `date` = CURDATE() AND deleted_date IS NULL";
+            $stmt = $db->query($sql);
+            $assignment_ids = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+            //check if the assignment
+            $assignment = array();
+            foreach($assignment_ids as $val){
+                $sql = "SELECT EXISTS (SELECT * FROM `assignment_admin` WHERE `user_id`=:user_id AND `assignment_id`=:assignment_id) AS `exists`";
+            
+                $stmt = $db->prepare($sql);
+                $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);        
+                $stmt->bindParam(':assignment_id', $val->assignment_id, PDO::PARAM_INT);    
+                $stmt->execute();                    
+                $assignment_admin = $stmt->fetch(PDO::FETCH_OBJ);
+
+                if($assignment_admin->exists == "1"){
+                    $sql = "SELECT `assignment_id`, `user_id`, `team`, `address`, `remark`, `date`, `date_extend`, `edited_by`
+                            FROM `assignment` 
+                            WHERE `assignment_id`=:assignment_id";
+            
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(':assignment_id', $val->assignment_id, PDO::PARAM_INT);    
+                    $stmt->execute();                    
+                    array_push($assignment, $stmt->fetch(PDO::FETCH_OBJ));
+                }
+                
+            }
+
+            echo '{ "status": "1",
+                    "data"  : '. json_encode($assignment) .' 
+                }';
+        }
+        catch(PDOException $e){
+            echo '{"error":{"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        echo '{ "status"    : "0",
+                "message"   : "Unauthorized access!" }
+        ';
+    }
+});
