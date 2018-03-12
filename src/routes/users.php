@@ -371,7 +371,7 @@ $app->get('/api/fullNameList', function(Request $request, Response $response){
         //get DB object and connect
         $db = $db->connect();
         //execute statement
-        $sql = "SELECT `user_id`, `full_name` FROM `user` WHERE (`state`=1) AND (`usertype`=0 OR `usertype`=4 OR `usertype`=1)";
+        $sql = "SELECT `user_id`, `full_name` FROM `user` WHERE (`state` = 1) AND (`usertype`= 0 OR `usertype`= 2 OR `usertype`= 3)";
         $stmt = $db->query($sql);
         $users = $stmt->fetchAll(PDO::FETCH_OBJ);
         $users = json_encode($users);
