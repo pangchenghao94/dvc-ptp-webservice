@@ -145,9 +145,7 @@ $app->post('/api/userlist', function(Request $request, Response $response){
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -182,9 +180,7 @@ $app->post('/api/user/get/{id}', function(Request $request, Response $response){
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -260,9 +256,7 @@ $app->post('/api/user/add', function(Request $request, Response $response){
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -441,9 +435,7 @@ $app->post('/api/user/changePassword', function(Request $request, Response $resp
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -487,8 +479,6 @@ $app->post('/api/user/getFullName/{id}', function(Request $request, Response $re
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });

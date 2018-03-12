@@ -18,11 +18,11 @@ header('Access-Control-Allow-Headers: content-type');
 
 $app = new \Slim\App(['settings' => ['displayErrorDetails' => true]]);
 
+//general functions
+require '../src/general/general.php';
+
 // users routes
 require '../src/routes/users.php';
 require '../src/routes/assignments.php';
-
-// general functions
-require '../src/general/general.php';
 
 $app->run();

@@ -59,9 +59,7 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
 
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -167,9 +165,7 @@ $app->post('/api/assignment/assignmentList', function(Request $request, Response
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -209,9 +205,7 @@ $app->post('/api/assignment/get/{id}', function(Request $request, Response $resp
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -286,9 +280,7 @@ $app->post('/api/assignment_admin/getList/{id}', function(Request $request, Resp
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -320,9 +312,11 @@ $app->post('/api/assignment/getPDKAssignmentList', function(Request $request, Re
                 $assignment_admin = $stmt->fetch(PDO::FETCH_OBJ);
 
                 if($assignment_admin->exists == "1"){
-                    $sql = "SELECT `assignment_id`, `user_id`, `team`, `address`, `remark`, `date`, `date_extend`, `edited_by`
-                            FROM `assignment` 
-                            WHERE `assignment_id`=:assignment_id";
+                    $sql = "SELECT `a`.`assignment_id`, `a`.`user_id`, `a`.`postcode`, `u`.`full_name`, `a`.`team`, `a`.`address`, `a`.`remark`, `a`.`date`, `a`.`date_extend`
+                            FROM `assignment`  AS `a` 
+                            INNER JOIN `user` AS `u` 
+                                ON `a`.`user_id` = `u`.`user_id` 
+                            WHERE `a`.`assignment_id`=:assignment_id";
             
                     $stmt = $db->prepare($sql);
                     $stmt->bindParam(':assignment_id', $val->assignment_id, PDO::PARAM_INT);    
@@ -342,8 +336,6 @@ $app->post('/api/assignment/getPDKAssignmentList', function(Request $request, Re
         finally{ $db = null; }
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
