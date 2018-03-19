@@ -13,7 +13,6 @@ $app->post('/api/login',function(Request $request, Response $response){
         //get DB object and connect
         $db = $db->connect();
 
-        $userData ='';
         $stmt = $db->prepare($sql);
         $password = md5($data->password);   
     
@@ -37,8 +36,8 @@ $app->post('/api/login',function(Request $request, Response $response){
         
         else {
             echo '{ "status"    : "2",
-                    "message"   : "Bad request wrong username and password" }
-                ';
+                    "message"   : "Bad request wrong username and password",
+                }';
         }  
     }
     catch(PDOException $e) {
@@ -129,7 +128,7 @@ $app->post('/api/userlist', function(Request $request, Response $response){
             $db = $db->connect();
             
             //execute statement
-            $sql = "SELECT `user_id`, `full_name`, `usertype`, `phone_no`, `state` FROM `user` WHERE `user_id` != :user_id AND `usertype` != 0";
+            $sql = "SELECT `user_id`, `full_name`, `usertype`, `phone_no`, `state`, `ic_no` FROM `user` WHERE `user_id` != :user_id AND `usertype` != 0";
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);            
             $stmt->execute();
@@ -164,7 +163,7 @@ $app->post('/api/user/get/{id}', function(Request $request, Response $response){
 
             //prepare state and execute
             $id = $request->getAttribute('id');
-            $sql = "SELECT `username`, `state`, `full_name`, `phone_no`, `email`, `gender`, `usertype` FROM `user` WHERE `user_id` = :id";
+            $sql = "SELECT `username`, `state`, `full_name`, `phone_no`, `email`, `gender`, `usertype`, `ic_no` FROM `user` WHERE `user_id` = :id";
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':id', $id, PDO::PARAM_STR);
             $stmt->execute();
@@ -227,9 +226,9 @@ $app->post('/api/user/add', function(Request $request, Response $response){
 
             //prepare state and execute     
             $sql = "INSERT INTO user 
-                    (`username`, `password`, `full_name`, `phone_no`, `email`, `gender`, `usertype`) 
+                    (`username`, `password`, `full_name`, `phone_no`, `email`, `gender`, `usertype`, `ic_no`) 
                     VALUES
-                    (:username, :password, :full_name, :phone_no, :email, :gender, :usertype)";
+                    (:username, :password, :full_name, :phone_no, :email, :gender, :usertype, :ic_no)";
 
             $stmt = $db->prepare($sql);
             $pass = md5($data->data->password);
@@ -240,6 +239,7 @@ $app->post('/api/user/add', function(Request $request, Response $response){
             $stmt->bindParam(':email', $data->data->email, PDO::PARAM_STR);
             $stmt->bindParam(':gender', $data->data->gender, PDO::PARAM_INT);
             $stmt->bindParam(':usertype', $data->data->usertype, PDO::PARAM_INT);
+            $stmt->bindParam(':ic_no', $data->data->ic_no, PDO::PARAM_STR);            
             
             $stmt->execute();
 
@@ -272,7 +272,7 @@ $app->post('/api/user/update/{id}', function(Request $request, Response $respons
         //prepare state and execute       .
         $id = $request->getAttribute('id');    
         $username = $request->getParam('username');
-        $password = $request->getParam('password');
+        $ic_no = $request->getParam('ic_no');        
         $state = $request->getParam('state');
         $full_name = $request->getParam('full_name');
         $phone_no = $request->getParam('phone_no');
@@ -282,7 +282,7 @@ $app->post('/api/user/update/{id}', function(Request $request, Response $respons
 
         $sql = "UPDATE `user` SET "
                     .($username === null? "": "`username` = :username,")
-                    .($password === null? "": "`password` = :password,")
+                    .($ic_no === null? "": "`ic_no` = :ic_no,")                    
                     .($state === null? "": "`state` = :state,")
                     .($full_name === null? "": "`full_name` = :full_name,")
                     .($phone_no === null? "": "`phone_no` = :phone_no,")
@@ -294,11 +294,10 @@ $app->post('/api/user/update/{id}', function(Request $request, Response $respons
         $sql = substr($sql, 0, $pos) . substr($sql, $pos + 1);
 
         $stmt = $db->prepare($sql);
-        $password = $password === null? null: md5($password);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
 
         $username   === null? : $stmt->bindParam(':username', $username, PDO::PARAM_STR);
-        $password   === null? : $stmt->bindParam(':password', $password, PDO::PARAM_STR);
+        $ic_no      === null? : $stmt->bindParam(':ic_no', $ic_no, PDO::PARAM_STR);        
         $state      === null? : $stmt->bindParam(':state', $state, PDO::PARAM_INT);
         $full_name  === null? : $stmt->bindParam(':full_name', $full_name, PDO::PARAM_STR);
         $phone_no   === null? : $stmt->bindParam(':phone_no', $phone_no, PDO::PARAM_STR);
@@ -386,6 +385,57 @@ $app->get('/api/fullNameList', function(Request $request, Response $response){
         ';
     }
     finally{ $db = null; }
+});
+
+//reset password
+$app->post('/api/user/resetPassword', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken && ($data->usertype == "0" || $data->usertype == "1"))
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $sql = "SELECT `password` FROM `user` WHERE `user_id` = :user_id";
+            $stmt = $db->prepare($sql);
+
+            $password = md5($data->data->oldPass); 
+            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
+            $stmt->execute();
+            $db_pass = $stmt->fetch(PDO::FETCH_OBJ);
+            
+            if(!empty($db_pass)){
+                if($db_pass->password == $password){
+                    $sql = "UPDATE `user` SET `password` = :password WHERE `user_id` = :user_id";
+                    $stmt = $db->prepare($sql);   
+                    $newPass = md5($data->data->newPassRepeat);
+                    $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
+                    $stmt->bindParam(':password', $newPass, PDO::PARAM_STR);                                    
+                    $stmt->execute();
+
+                    echo '{ "status"    : "1",
+                            "message"   : "Update Successfully" }
+                    ';
+                }
+                else{
+                    echo '{ "status"    : "2",
+                            "message"   : "Bad request, you have entered the wrong existing password" }
+                    ';
+                }
+            }
+        }
+        catch(PDOException $e){
+            echo '{"error":{"text": '.$e->getMessage().'}}';
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
 });
 
 //Change password

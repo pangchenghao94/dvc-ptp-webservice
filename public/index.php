@@ -2,14 +2,12 @@
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 use Slim\Http\UploadedFile;
+use Aws\S3\S3Client;
+use Aws\Exception\AwsException;
+use Aws\Credentials\CredentialProvider;
 
 require '../vendor/autoload.php';
 require '../src/config/db.php';
-
-$s3 = new Aws\S3\S3Client([
-    'version' => 'latest',
-    'region'  => 'us-east-1'
-]);
 
 // $http_origin = $_SERVER['HTTP_REFERER'];
 
@@ -31,5 +29,6 @@ require '../src/general/general.php';
 require '../src/routes/users.php';
 require '../src/routes/assignments.php';
 require '../src/routes/uploadFiles.php';
+require '../src/routes/exhibits.php';
 
 $app->run();
