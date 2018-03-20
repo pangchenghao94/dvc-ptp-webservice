@@ -29,50 +29,66 @@ $app->post('/api/upload', function(Request $request, Response $response) {
     $directory = $this->get('upload_directory');
     $s3 = $this->get('s3');
     $bucketName = $this->get('bucketName');
+    
+    $user_id = $request->getParam('user_id');
+    $token = $request->getParam('token'); 
+    $systemToken = apiToken($user_id);
 
-    $data = $request->getParam('fileName');
-    $files = $request->getUploadedFiles();
+    $data = $request->getParam('data');
+    $filename   = $data->fileName;   
+    $code       = $data->code;   
+    $type       = $data->type;   
+    $exhibit_id = $data->exhibit_id;   
 
-    if (empty($files['file'])) {
-        throw new \RuntimeException('Expected a newfile');
-    }
+    if($token == $systemToken){
+        $files = $request->getUploadedFiles();
 
-    $file = $files['file'];
-
-    if ($file->getError() === UPLOAD_ERR_OK) {
-        $filename = moveUploadedFile($directory, $file);
-        
-        try{
-            $s3->putObject([
-                'Bucket' => $bucketName,
-                'Key' => "testing/{$filename}",
-                'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
-            ]);
-
-            return $response->withJson([
-                'status' => 'success',
-                'result' => [
-                    'fileName' => $filename
-                ],
-            ])->withStatus(200);
+        if (empty($files['file'])) {
+            throw new \RuntimeException('Expected a newfile');
         }
-        
-        catch(S3Exception $e){
+    
+        $file = $files['file'];
+    
+        if ($file->getError() === UPLOAD_ERR_OK) {
+            $filename = moveUploadedFile($directory, $file);
+            
+            try{
+                $s3->putObject([
+                    'Bucket' => $bucketName,
+                    'Key' => "exhibit/{$exhibit_id}/{$filename}",
+                    'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
+                ]);
+    
+                return $response->withJson([
+                    'status' => 'success',
+                    'result' => [
+                        'fileName' => $filename,
+                        'code' => $code,
+                        'type' => $type
+                    ],
+                ])->withStatus(200);
+            }
+            
+            catch(S3Exception $e){
+                return $response
+                ->withJson([
+                    'status' => 'fail',
+                    'error' => $e->getMessage()
+                ])
+                ->withStatus(415);
+            }
+        }
+        else{
             return $response
-            ->withJson([
-                'status' => 'fail',
-                'error' => $e->getMessage()
-            ])
-            ->withStatus(415);
+                ->withJson([
+                    'status' => 'fail',
+                    'error' => 'Nothing was uploaded'
+                ])
+                ->withStatus(415);
         }
     }
     else{
-        return $response
-            ->withJson([
-                'status' => 'fail',
-                'error' => 'Nothing was uploaded'
-            ])
-            ->withStatus(415);
+        GenError::unauthorizedAccess();
     }
 });
 
