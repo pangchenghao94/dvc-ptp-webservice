@@ -26,20 +26,16 @@ $container['s3'] = new S3Client([
 ]);
 
 $app->post('/api/upload', function(Request $request, Response $response) {
+    $db = new db();
     $directory = $this->get('upload_directory');
     $s3 = $this->get('s3');
     $bucketName = $this->get('bucketName');
     
-    $user_id = $request->getParam('user_id');
-    $token = $request->getParam('token'); 
-    $systemToken = apiToken($user_id);
-
-    $data = $request->getParam('data');
-    $filename   = $data->fileName;   
-    $code       = $data->code;   
-    $type       = $data->type;   
-    $exhibit_id = $data->exhibit_id;   
-
+    $user_id    = $request->getParam('user_id');
+    $token      = $request->getParam('token'); 
+    $exhibit_id =  $request->getParam('exhibit_id');    
+    $systemToken= apiToken($user_id);
+    
     if($token == $systemToken){
         $files = $request->getUploadedFiles();
 
@@ -58,21 +54,43 @@ $app->post('/api/upload', function(Request $request, Response $response) {
                     'Key' => "exhibit/{$exhibit_id}/{$filename}",
                     'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
                 ]);
-    
-                return $response->withJson([
-                    'status' => 'success',
-                    'result' => [
-                        'fileName' => $filename,
-                        'code' => $code,
-                        'type' => $type
-                    ],
-                ])->withStatus(200);
+
+                try{
+                    $code       =  $request->getParam('code');
+                    $type       =  $request->getParam('type');
+                    $s3_path    =  $filename;
+                    
+                    //get DB object and connect
+                    $db = $db->connect();
+
+                    //prepare state and execute     
+                    $sql = "INSERT INTO `exhibit_item` 
+                            (`exhibit_id`, `code`, `type`, `s3_path`) 
+                            VALUES
+                            (:exhibit_id, :code, :type, :s3_path)";
+
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(':exhibit_id', $exhibit_id, PDO::PARAM_INT);
+                    $stmt->bindParam(':code', $code, PDO::PARAM_STR);            
+                    $stmt->bindParam(':type', $type, PDO::PARAM_STR);
+                    $stmt->bindParam(':s3_path', $s3_path, PDO::PARAM_STR);
+
+                    $stmt->execute();      
+
+                    return $response->withJson([
+                        'status' => '1'
+                    ])->withStatus(200);
+                }
+                catch(PDOException $e){
+                    GenError::unexpectedError($e);
+                }
+                finally{ $db = null; }
             }
             
             catch(S3Exception $e){
                 return $response
                 ->withJson([
-                    'status' => 'fail',
+                    'status' => '0',
                     'error' => $e->getMessage()
                 ])
                 ->withStatus(415);
@@ -81,7 +99,7 @@ $app->post('/api/upload', function(Request $request, Response $response) {
         else{
             return $response
                 ->withJson([
-                    'status' => 'fail',
+                    'status' => '0',
                     'error' => 'Nothing was uploaded'
                 ])
                 ->withStatus(415);
