@@ -25,11 +25,39 @@ $container['s3'] = new S3Client([
     'credentials' => $provider
 ]);
 
-$app->post('/api/upload', function(Request $request, Response $response) {
+function moveUploadedFile($directory, $uploadedFile)
+{
+    $extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
+    $basename = bin2hex(random_bytes(8)); // see http://php.net/manual/en/function.random-bytes.php
+    $filename = sprintf('%s.%0.8s', $basename, $extension);
+    
+    $uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
+    return $filename;
+}
+
+function removeTemporaryFiles($directory){
+    try{
+        $files = glob($directory .DIRECTORY_SEPARATOR. "*"); // get all file names
+        
+        foreach($files as $file){ // iterate files
+            if(is_file($file)){
+                unlink($file); // delete file
+            }
+        }
+    }
+    catch(Exception $e){
+        echo json_encode($e);
+    }
+}
+
+$app->post('/api/upload/exhibit_item', function(Request $request, Response $response) {
     $db = new db();
     $directory = $this->get('upload_directory');
     $s3 = $this->get('s3');
     $bucketName = $this->get('bucketName');
+
+    //extend execution time.
+    ini_set('max_execution_time', 400);
     
     $user_id    = $request->getParam('user_id');
     $token      = $request->getParam('token'); 
@@ -110,12 +138,162 @@ $app->post('/api/upload', function(Request $request, Response $response) {
     }
 });
 
-function moveUploadedFile($directory, $uploadedFile)
-{
-    $extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
-    $basename = bin2hex(random_bytes(8)); // see http://php.net/manual/en/function.random-bytes.php
-    $filename = sprintf('%s.%0.8s', $basename, $extension);
+$app->post('/api/upload/premise_location_drawing', function(Request $request, Response $response) {
+    $db = new db();
+    $directory = $this->get('upload_directory');
+    $s3 = $this->get('s3');
+    $bucketName = $this->get('bucketName');
     
-    $uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
-    return $filename;
-}
+    $user_id    = $request->getParam('user_id');
+    $token      = $request->getParam('token'); 
+    $exhibit_id =  $request->getParam('exhibit_id');    
+    $systemToken= apiToken($user_id);
+    
+    if($token == $systemToken){
+        $files = $request->getUploadedFiles();
+
+        if (empty($files['file'])) {
+            throw new \RuntimeException('Expected a newfile');
+        }
+    
+        $file = $files['file'];
+    
+        if ($file->getError() === UPLOAD_ERR_OK) {
+            $filename = moveUploadedFile($directory, $file);
+            
+            try{
+                $s3->putObject([
+                    'Bucket' => $bucketName,
+                    'Key' => "exhibit/{$exhibit_id}/{$filename}",
+                    'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
+                ]);
+
+                try{
+                    $premise_location_path = $filename;
+                    
+                    //get DB object and connect
+                    $db = $db->connect();
+
+                    //prepare state and execute 
+                    $sql = "UPDATE `exhibit` 
+                            SET `premise_location_path` = :premise_location_path
+                            WHERE `exhibit_id` = :exhibit_id";
+
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(':exhibit_id', $exhibit_id, PDO::PARAM_INT);
+                    $stmt->bindParam(':premise_location_path', $premise_location_path, PDO::PARAM_STR);
+
+                    $stmt->execute();      
+
+                    return $response->withJson([
+                        'status' => '1'
+                    ])->withStatus(200);
+                }
+                catch(PDOException $e){
+                    GenError::unexpectedError($e);
+                }
+                finally{ $db = null; }
+            }
+            
+            catch(S3Exception $e){
+                return $response
+                ->withJson([
+                    'status' => '0',
+                    'error' => $e->getMessage()
+                ])
+                ->withStatus(415);
+            }
+        }
+        else{
+            return $response
+                ->withJson([
+                    'status' => '0',
+                    'error' => 'Nothing was uploaded'
+                ])
+                ->withStatus(415);
+        }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
+$app->post('/api/upload/floor_plan_drawing', function(Request $request, Response $response) {
+    $db = new db();
+    $directory = $this->get('upload_directory');
+    $s3 = $this->get('s3');
+    $bucketName = $this->get('bucketName');
+    
+    $user_id    = $request->getParam('user_id');
+    $token      = $request->getParam('token'); 
+    $exhibit_id =  $request->getParam('exhibit_id');    
+    $systemToken= apiToken($user_id);
+    
+    if($token == $systemToken){
+        $files = $request->getUploadedFiles();
+
+        if (empty($files['file'])) {
+            throw new \RuntimeException('Expected a newfile');
+        }
+    
+        $file = $files['file'];
+    
+        if ($file->getError() === UPLOAD_ERR_OK) {
+            $filename = moveUploadedFile($directory, $file);
+            
+            try{
+                $s3->putObject([
+                    'Bucket' => $bucketName,
+                    'Key' => "exhibit/{$exhibit_id}/{$filename}",
+                    'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
+                ]);
+
+                try{
+                    $floor_plan_path = $filename;
+                    
+                    //get DB object and connect
+                    $db = $db->connect();
+
+                    //prepare state and execute 
+                    $sql = "UPDATE `exhibit` 
+                            SET `floor_plan_path` = :floor_plan_path
+                            WHERE `exhibit_id` = :exhibit_id";
+
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(':exhibit_id', $exhibit_id, PDO::PARAM_INT);
+                    $stmt->bindParam(':floor_plan_path', $floor_plan_path, PDO::PARAM_STR);
+
+                    $stmt->execute();      
+
+                    return $response->withJson([
+                        'status' => '1'
+                    ])->withStatus(200);
+                }
+                catch(PDOException $e){
+                    GenError::unexpectedError($e);
+                }
+                finally{ $db = null; }
+            }
+            
+            catch(S3Exception $e){
+                return $response
+                ->withJson([
+                    'status' => '0',
+                    'error' => $e->getMessage()
+                ])
+                ->withStatus(415);
+            }
+        }
+        else{
+            return $response
+                ->withJson([
+                    'status' => '0',
+                    'error' => 'Nothing was uploaded'
+                ])
+                ->withStatus(415);
+        }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
