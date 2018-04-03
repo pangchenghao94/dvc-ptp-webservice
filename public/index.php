@@ -28,7 +28,7 @@ require '../src/general/general.php';
 // users routes
 require '../src/routes/users.php';
 require '../src/routes/assignments.php';
-require '../src/routes/uploadFiles.php';
+require '../src/routes/s3.php';
 require '../src/routes/exhibits.php';
 require '../src/routes/inds.php';
 

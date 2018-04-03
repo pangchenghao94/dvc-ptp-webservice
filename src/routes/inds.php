@@ -16,33 +16,37 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
 
             //prepare state and execute     
             $sql = "INSERT INTO `ind` 
-                        (`assignment_id`, `user_id`, `p_cooperation`, `p_close`, `p_empty`, `p_shortAddr`, `po_name`, `po_id`, `no_familyMember`, `no_fever`, `no_out_breeding`, 
-                        `no_in_breeding`, `container_type`, `no_pot_out_breeding`, `no_pot_in_breeding`, `act_abating`, `act_destroy`, `act_education`, `act_pamphlet`, `issue_date`) 
+                        (`assignment_id`, `user_id`, `p_cooperation`, `p_close`, `p_empty`, `p_shortAddr`, `po_name`, `po_id`, `no_familyMember`, `no_fever`, 
+                        `no_out_breeding`, `no_in_breeding`, `container_type`, `no_pot_out_breeding`, `no_pot_in_breeding`, `act_abating`, `act_destroy`, 
+                        `act_education`, `act_pamphlet`, `issue_date`, `coor_lat`, `coor_lng`) 
                     VALUES 
-                        (:assignment_id, :user_id, :p_cooperation, :p_close, :p_empty, :p_shortAddr, :po_name, :po_id, :no_familyMember, :no_fever, :no_out_breeding, 
-                        :no_in_breeding, :container_type, :no_pot_out_breeding, :no_pot_in_breeding, :act_abating, :act_destroy, :act_education, :act_pamphlet, CURDATE())";
+                        (:assignment_id, :user_id, :p_cooperation, :p_close, :p_empty, :p_shortAddr, :po_name, :po_id, :no_familyMember, :no_fever, 
+                        :no_out_breeding, :no_in_breeding, :container_type, :no_pot_out_breeding, :no_pot_in_breeding, :act_abating, :act_destroy, 
+                        :act_education, :act_pamphlet, CURDATE(), :coor_lat, :coor_lng)";
 
             $stmt = $db->prepare($sql);
-            $stmt->bindParam(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);
-            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);            
-            $stmt->bindParam(':p_cooperation', $data->data->p_cooperation, PDO::PARAM_INT);
-            $stmt->bindParam(':p_close', $data->data->p_close, PDO::PARAM_INT);
-            $stmt->bindParam(':p_empty', $data->data->p_empty, PDO::PARAM_INT);
-            $stmt->bindParam(':p_shortAddr', $data->data->p_shortAddr, PDO::PARAM_STR);
-            $stmt->bindParam(':po_name', $data->data->po_name, PDO::PARAM_STR);
-            $stmt->bindParam(':po_id', $data->data->po_id, PDO::PARAM_STR);
-            $stmt->bindParam(':no_familyMember', $data->data->no_familyMember, PDO::PARAM_INT);
-            $stmt->bindParam(':no_fever', $data->data->no_fever, PDO::PARAM_INT);
-            $stmt->bindParam(':no_out_breeding', $data->data->no_out_breeding, PDO::PARAM_INT);
-            $stmt->bindParam(':no_in_breeding', $data->data->no_in_breeding, PDO::PARAM_INT);
-            $stmt->bindParam(':container_type', $data->data->container_type, PDO::PARAM_STR);
-            $stmt->bindParam(':no_pot_out_breeding', $data->data->no_pot_out_breeding, PDO::PARAM_INT);
-            $stmt->bindParam(':no_pot_in_breeding', $data->data->no_pot_in_breeding, PDO::PARAM_INT);
-            $stmt->bindParam(':act_abating', $data->data->act_abating, PDO::PARAM_INT);
-            $stmt->bindParam(':act_destroy', $data->data->act_destroy, PDO::PARAM_INT);
-            $stmt->bindParam(':act_education', $data->data->act_education, PDO::PARAM_INT);
-            $stmt->bindParam(':act_pamphlet', $data->data->act_pamphlet, PDO::PARAM_INT);
-            
+            $stmt->bindValue(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);
+            $stmt->bindValue(':user_id', $data->user_id, PDO::PARAM_INT);            
+            $stmt->bindValue(':p_cooperation', (int)$data->data->p_cooperation, PDO::PARAM_INT);
+            $stmt->bindValue(':p_close', (int)$data->data->p_close, PDO::PARAM_INT);
+            $stmt->bindValue(':p_empty', (int)$data->data->p_empty, PDO::PARAM_INT);
+            $stmt->bindValue(':p_shortAddr', $data->data->p_shortAddr, PDO::PARAM_STR);
+            $stmt->bindValue(':po_name', $data->data->po_name, PDO::PARAM_STR);
+            $stmt->bindValue(':po_id', $data->data->po_id, PDO::PARAM_STR);
+            $stmt->bindValue(':no_familyMember', $data->data->no_familyMember, PDO::PARAM_INT);
+            $stmt->bindValue(':no_fever', $data->data->no_fever, PDO::PARAM_INT);
+            $stmt->bindValue(':no_out_breeding', $data->data->no_out_breeding, PDO::PARAM_INT);
+            $stmt->bindValue(':no_in_breeding', $data->data->no_in_breeding, PDO::PARAM_INT);
+            $stmt->bindValue(':container_type', $data->data->container_type, PDO::PARAM_STR);
+            $stmt->bindValue(':no_pot_out_breeding', $data->data->no_pot_out_breeding, PDO::PARAM_INT);
+            $stmt->bindValue(':no_pot_in_breeding', $data->data->no_pot_in_breeding, PDO::PARAM_INT);
+            $stmt->bindValue(':act_abating', (int)$data->data->act_abating, PDO::PARAM_INT);
+            $stmt->bindValue(':act_destroy', (int)$data->data->act_destroy, PDO::PARAM_INT);
+            $stmt->bindValue(':act_education', (int)$data->data->act_education, PDO::PARAM_INT);
+            $stmt->bindValue(':act_pamphlet', (int)$data->data->act_pamphlet, PDO::PARAM_INT);
+            $stmt->bindValue(':coor_lat', $data->data->coor_lat);
+            $stmt->bindValue(':coor_lng', $data->data->coor_lng);
+
             $stmt->execute();
 
             $sql = "SELECT LAST_INSERT_ID() AS id";
@@ -50,25 +54,6 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
             $stmt->execute();        
 
             $ind_id = $stmt->fetch(PDO::FETCH_OBJ);
-
-            // //prepare state and execute     
-            // $sql = "INSERT INTO `exhibit` 
-            //             (`po_full_name`, `po_ic_no`, `acceptance`) 
-            //         VALUES
-            //             (:po_full_name, :po_ic_no, :acceptance)";
-
-            // $stmt = $db->prepare($sql);
-            // $stmt->bindParam(':po_full_name', $data->data->po_full_name, PDO::PARAM_STR);
-            // $stmt->bindParam(':po_ic_no', $data->data->po_ic_no, PDO::PARAM_STR);            
-            // $stmt->bindParam(':acceptance', $data->data->acceptance, PDO::PARAM_STR);
-
-            // $stmt->execute();
-
-            // $sql = "SELECT LAST_INSERT_ID() AS id";
-            // $stmt = $db->prepare($sql);
-            // $stmt->execute();        
-
-            // $exhibit_id = $stmt->fetch(PDO::FETCH_OBJ);
 
             $sek5_id = "";
             if(isset($data->sek5Data)){
@@ -103,22 +88,22 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
                 :chkbx1, :chkbx2, :chkbx3, :chkbx4, :chkbx5, :chkbx6, :chkbx7, :chkbx8, :chkbx9, :chkbx10, :chkbx11, :chkbx12, :chkbx13)";
 
                 $stmt = $db->prepare($sql);
-                $stmt->bindParam(':ind_id', $ind_id->id, PDO::PARAM_INT);
-                $stmt->bindParam(':checking_date', $data->sek8Data->checking_date, PDO::PARAM_STR);            
-                $stmt->bindParam(':remark', $data->sek8Data->remark, PDO::PARAM_STR);
-                $stmt->bindParam(':chkbx1', $data->sek8Data->chkbx1, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx2', $data->sek8Data->chkbx2, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx3', $data->sek8Data->chkbx3, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx4', $data->sek8Data->chkbx4, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx5', $data->sek8Data->chkbx5, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx6', $data->sek8Data->chkbx6, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx7', $data->sek8Data->chkbx7, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx8', $data->sek8Data->chkbx8, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx9', $data->sek8Data->chkbx9, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx10', $data->sek8Data->chkbx10, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx11', $data->sek8Data->chkbx11, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx12', $data->sek8Data->chkbx12, PDO::PARAM_INT);
-                $stmt->bindParam(':chkbx13', $data->sek8Data->chkbx13, PDO::PARAM_INT);
+                $stmt->bindValue(':ind_id', $ind_id->id, PDO::PARAM_INT);
+                $stmt->bindValue(':checking_date', $data->sek8Data->checking_date, PDO::PARAM_STR);            
+                $stmt->bindValue(':remark', $data->sek8Data->remark, PDO::PARAM_STR);
+                $stmt->bindValue(':chkbx1', (int)$data->sek8Data->chkbx1, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx2', (int)$data->sek8Data->chkbx2, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx3', (int)$data->sek8Data->chkbx3, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx4', (int)$data->sek8Data->chkbx4, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx5', (int)$data->sek8Data->chkbx5, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx6', (int)$data->sek8Data->chkbx6, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx7', (int)$data->sek8Data->chkbx7, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx8', (int)$data->sek8Data->chkbx8, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx9', (int)$data->sek8Data->chkbx9, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx10', (int)$data->sek8Data->chkbx10, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx11', (int)$data->sek8Data->chkbx11, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx12', (int)$data->sek8Data->chkbx12, PDO::PARAM_INT);
+                $stmt->bindValue(':chkbx13', (int)$data->sek8Data->chkbx13, PDO::PARAM_INT);
 
                 $stmt->execute();
 
@@ -133,14 +118,15 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
             if(isset($data->exhibitData)){
                 //Insert Exhibit
                 $sql = "INSERT INTO `exhibit` 
-                (`po_full_name`, `po_ic_no`, `acceptance`, `issue_date`) 
+                (`ind_id`, `po_full_name`, `po_ic_no`, `acceptance`, `issue_date`) 
                 VALUES
-                (:po_full_name, :po_ic_no, :acceptance, CURDATE())";
+                (:ind_id, :po_full_name, :po_ic_no, :acceptance, CURDATE())";
 
                 $stmt = $db->prepare($sql);
-                $stmt->bindParam(':po_full_name', $data->exhibitData->po_full_name, PDO::PARAM_STR);
-                $stmt->bindParam(':po_ic_no', $data->exhibitData->po_ic_no, PDO::PARAM_STR);            
-                $stmt->bindParam(':acceptance', $data->exhibitData->acceptance, PDO::PARAM_STR);
+                $stmt->bindValue(':ind_id', $ind_id->id, PDO::PARAM_INT);                
+                $stmt->bindValue(':po_full_name', $data->exhibitData->po_full_name, PDO::PARAM_STR);
+                $stmt->bindValue(':po_ic_no', $data->exhibitData->po_ic_no, PDO::PARAM_STR);            
+                $stmt->bindValue(':acceptance', (int)$data->exhibitData->acceptance, PDO::PARAM_INT);
 
                 $stmt->execute();
 
@@ -163,6 +149,143 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
         }
         finally{ $db = null; }
 
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
+//Get ind list by user_id
+$app->post('/api/ind/indList_pdk', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $sql = "SELECT `ind_id`, `p_shortAddr`, `po_name`, `last_modified` FROM `ind` 
+                    WHERE `user_id` = :user_id AND `issue_date` = CURDATE()";
+
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $inds = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+            return $response->withJson([
+                'status' => '1',
+                'data' => $inds
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
+//Get ind from ind_id
+$app->post('/api/ind/get/{id}', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+    $ind_id = $request->getAttribute('id');         
+    
+    $s3 = $this->get('s3');
+    $bucketName = $this->get('bucketName');
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            
+            //select from ind table
+            $sql = "SELECT 
+                        `assignment_id`, `user_id`, `issue_date`, `p_cooperation`, `p_close`, `p_empty`, `p_shortAddr`, `po_name`, `po_id`, `no_familyMember`, 
+                        `no_fever`, `no_out_breeding`, `no_in_breeding`, `container_type`, `no_pot_out_breeding`, `no_pot_in_breeding`, `act_abating`, `act_destroy`, 
+                        `act_education`, `act_pamphlet`, `coor_lat`, `coor_lng` 
+                    FROM `ind`
+                    WHERE `ind_id` = :ind_id";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':ind_id', $ind_id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $ind = $stmt->fetch(PDO::FETCH_OBJ);
+
+            //select from exhibit table
+            $sql = "SELECT `exhibit_id`, `issue_date`, `po_full_name`, `po_ic_no`, `acceptance`, `floor_plan_path`, `premise_location_path` 
+                    FROM `exhibit`
+                    WHERE `ind_id` = :ind_id";
+            
+            $stmt1 = $db->prepare($sql);
+            $stmt1->bindParam(':ind_id', $ind_id, PDO::PARAM_INT);
+            $stmt1->execute();
+
+            $exhibit = $stmt1->fetch(PDO::FETCH_OBJ);
+
+            if(isset($exhibit->exhibit_id)){
+
+                //select from exhibitItem table
+                $sql = "SELECT `exhibit_item_id`, `code`, `type`, `s3_path` 
+                        FROM `exhibit_item`
+                        WHERE `exhibit_id` = :exhibit_id AND `deleted_date` IS NULL";
+                
+                $stmt2 = $db->prepare($sql);
+                $stmt2->bindParam(':exhibit_id', $exhibit->exhibit_id, PDO::PARAM_INT);
+                $stmt2->execute();
+
+                $exhibitItems = $stmt2->fetchAll(PDO::FETCH_OBJ);
+            }
+
+            //select from sek8 table
+            $sql = "SELECT 
+                        `sek8_id`, `checking_date`, `chkbx1`, `chkbx2`, `chkbx3`, `chkbx4`, `chkbx5`, `chkbx6`, `chkbx7`, `chkbx8`, `chkbx9`, `chkbx10`, 
+                        `chkbx11`, `chkbx12`, `chkbx13`, `remark` 
+                    FROM `sek8`
+                    WHERE `ind_id` = :ind_id";
+            
+            $stmt3 = $db->prepare($sql);
+            $stmt3->bindParam(':ind_id', $ind_id, PDO::PARAM_INT);
+            $stmt3->execute();
+
+            $sek8 = $stmt3->fetch(PDO::FETCH_OBJ);           
+            
+            //select from sek5 table
+            $sql = "SELECT `sek5_id`, `appointment_date`, `remark`, `last_modified` 
+                    FROM `sek5`
+                    WHERE `ind_id` = :ind_id";
+            
+            $stmt4 = $db->prepare($sql);
+            $stmt4->bindParam(':ind_id', $ind_id, PDO::PARAM_INT);
+            $stmt4->execute();
+
+            $sek5 = $stmt4->fetch(PDO::FETCH_OBJ);  
+
+            return $response->withJson([
+                'status' => '1',
+                'ind_id' => $ind_id,
+                'ind' => $ind,
+                'exhibit' => $exhibit,
+                'exhibitItems' => $exhibitItems,
+                'sek8' => $sek8,
+                'sek5' => $sek5
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
     }
     else{
         GenError::unauthorizedAccess();
