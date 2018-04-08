@@ -316,7 +316,8 @@ $app->post('/api/getDrawingsURL', function(Request $request, Response $response)
 
             $floor_plan_result = $s3->getCommand('GetObject', [
                 'Bucket' => $bucketName,
-                'Key'    => "exhibit/{$exhibit_id}/{$floor_plan_path}"
+                'Key'    => "exhibit/{$exhibit_id}/{$floor_plan_path}",
+                'ResponseContentDisposition' => 'attachment; filename="premiselocation.png"',
             ]);            
 
             $floor_plan_request = $s3->createPresignedRequest($floor_plan_result, '+10 minutes');
@@ -325,7 +326,8 @@ $app->post('/api/getDrawingsURL', function(Request $request, Response $response)
 
             $premise_location_result = $s3->getCommand('GetObject', [
                 'Bucket' => $bucketName,
-                'Key'    => "exhibit/{$exhibit_id}/{$premise_location_path}"
+                'Key'    => "exhibit/{$exhibit_id}/{$premise_location_path}",
+                'ResponseContentDisposition' => 'attachment; filename="floorplan.png"',
             ]);            
 
             $premise_location_request = $s3->createPresignedRequest($premise_location_result, '+10 minutes');
@@ -337,6 +339,8 @@ $app->post('/api/getDrawingsURL', function(Request $request, Response $response)
                 'status' => '1',
                 'floor_plan' => $floor_plan_presignedUrl,
                 'premise_location' => $premise_location_presignedUrl
+                // 'floor_plan' => '',
+                // 'premise_location' => ''
             ])->withStatus(200);
         }
         catch(PDOException $e){
@@ -365,7 +369,8 @@ $app->post('/api/getExhibitItemURL', function(Request $request, Response $respon
 
             $result = $s3->getCommand('GetObject', [
                 'Bucket' => $bucketName,
-                'Key'    => "exhibit/{$exhibit_id}/{$s3_path}"
+                'Key'    => "exhibit/{$exhibit_id}/{$s3_path}",
+                'ResponseContentDisposition' => 'attachment; filename="exhibitItem.png"',                
             ]);            
 
             $request = $s3->createPresignedRequest($result, '+10 minutes');
@@ -375,6 +380,8 @@ $app->post('/api/getExhibitItemURL', function(Request $request, Response $respon
             return $response->withJson([
                 'status' => '1',
                 's3_path' => $presignedUrl
+                // 's3_path' => ''
+                
             ])->withStatus(200);
         }
         catch(PDOException $e){

@@ -192,6 +192,45 @@ $app->post('/api/ind/indList_pdk', function(Request $request, Response $response
     }
 });
 
+//Get ind list by user_id
+$app->post('/api/ind/indList_web', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $sql = "SELECT `i`.`ind_id`, `u`.`full_name`, `a`.`team`,`i`.`issue_date`, `i`.`p_shortAddr`, `i`.`po_name` 
+                    FROM `ind` AS `i`
+                    INNER JOIN `user` AS `u`
+                        ON `i`.`user_id` = `u`.`user_id`
+                    INNER JOIN `assignment` AS `a`
+                        ON `i`.`assignment_id` = `a`.`assignment_id`
+                    ORDER BY `issue_date` DESC";
+
+            $stmt = $db->query($sql);
+            $inds = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+            return $response->withJson([
+                'status' => '1',
+                'data' => $inds
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
 //Get ind from ind_id
 $app->post('/api/ind/get/{id}', function(Request $request, Response $response){
     $db = new db();
@@ -211,10 +250,12 @@ $app->post('/api/ind/get/{id}', function(Request $request, Response $response){
             
             //select from ind table
             $sql = "SELECT 
-                        `assignment_id`, `user_id`, `issue_date`, `p_cooperation`, `p_close`, `p_empty`, `p_shortAddr`, `po_name`, `po_id`, `no_familyMember`, 
-                        `no_fever`, `no_out_breeding`, `no_in_breeding`, `container_type`, `no_pot_out_breeding`, `no_pot_in_breeding`, `act_abating`, `act_destroy`, 
-                        `act_education`, `act_pamphlet`, `coor_lat`, `coor_lng` 
-                    FROM `ind`
+                        `i`.`assignment_id`, `i`.`user_id`, `i`.`issue_date`, `i`.`p_cooperation`, `i`.`p_close`, `i`.`p_empty`, `i`.`p_shortAddr`, `i`.`po_name`, `i`.`po_id`, `i`.`no_familyMember`, 
+                        `i`.`no_fever`, `i`.`no_out_breeding`, `i`.`no_in_breeding`, `i`.`container_type`, `i`.`no_pot_out_breeding`, `i`.`no_pot_in_breeding`, `i`.`act_abating`, `i`.`act_destroy`, 
+                        `i`.`act_education`, `i`.`act_pamphlet`, `i`.`coor_lat`, `i`.`coor_lng`, `u`.`full_name`
+                    FROM `ind` AS `i`
+                    INNER JOIN `user` AS `u` 
+                        ON `i`.`user_id` = `u`.`user_id` 
                     WHERE `ind_id` = :ind_id";
             
             $stmt = $db->prepare($sql);
@@ -234,6 +275,7 @@ $app->post('/api/ind/get/{id}', function(Request $request, Response $response){
 
             $exhibit = $stmt1->fetch(PDO::FETCH_OBJ);
 
+            $exhibitItems = false;
             if(isset($exhibit->exhibit_id)){
 
                 //select from exhibitItem table
