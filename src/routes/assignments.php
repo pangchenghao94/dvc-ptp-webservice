@@ -19,7 +19,7 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
 
             //prepare state and execute     
             $sql = "INSERT INTO `assignment` 
-                    (`user_id`, `team`, `address`, `remark`, `date`, `postcode`) 
+                    (`user_id`, `team`, `address`, `remark`, `date`, `postcode`, `pka`, `pa`) 
                     VALUES
                     (:user_id, :team, :address, :remark, :date, :postcode)";
 
@@ -30,6 +30,8 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
             $stmt->bindParam(':remark', $data->data->remark, PDO::PARAM_STR);
             $stmt->bindParam(':date', $data->data->date, PDO::PARAM_STR);
             $stmt->bindParam(':postcode', $data->data->postcode, PDO::PARAM_STR);
+            $stmt->bindParam(':pka', $data->data->pka, PDO::PARAM_INT);
+            $stmt->bindParam(':pa', $data->data->pa, PDO::PARAM_INT);            
             
             $stmt->execute();
 
@@ -85,7 +87,9 @@ $app->post('/api/assignment/update', function(Request $request, Response $respon
                         `remark` = :remark,
                         `date` = :date,
                         `postcode` = :postcode,
-                        `edited_by` = :edited_by
+                        `edited_by` = :edited_by,
+                        `pka` = :pka,
+                        `pa` = :pa
                     WHERE `assignment_id` = :assignment_id";
 
             $stmt = $db->prepare($sql);
@@ -95,7 +99,10 @@ $app->post('/api/assignment/update', function(Request $request, Response $respon
             $stmt->bindParam(':date', $data->data->date, PDO::PARAM_STR);
             $stmt->bindParam(':postcode', $data->data->postcode, PDO::PARAM_STR);
             $stmt->bindParam(':edited_by', $data->user_id, PDO::PARAM_INT);
-            $stmt->bindParam(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);            
+            $stmt->bindParam(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);        
+            $stmt->bindParam(':pka', $data->data->pka, PDO::PARAM_INT);            
+            $stmt->bindParam(':pa', $data->data->pa, PDO::PARAM_INT);            
+                
             
             $stmt->execute();
 
@@ -154,7 +161,13 @@ $app->post('/api/assignment/assignmentList', function(Request $request, Response
             //get DB object and connect
             $db = $db->connect();
             //execute statement
-            $sql = "SELECT `assignment_id`, `address`, `team`, `postcode`, `date` FROM `assignment` WHERE `deleted_date` IS NULL";
+            $sql = "SELECT `a`.`assignment_id`, `a`.`address`, `a`.`team`, `a`.`postcode`, `a`.`date`, `pka`.`full_name` AS pka_full_name, `pa`.`full_name` AS pa_full_name
+                    FROM `assignment` AS `a`
+                    LEFT JOIN `user` AS `pka`
+                        on `a`.`pka` = `pka`.`user_id`
+                    LEFT JOIN `user` AS `pa`
+                        on `a`.`pa` = `pa`.`user_id`
+                    WHERE `deleted_date` IS NULL";
             $stmt = $db->query($sql);
             $users = $stmt->fetchAll(PDO::FETCH_OBJ);
             echo json_encode($users);
@@ -183,10 +196,14 @@ $app->post('/api/assignment/get/{id}', function(Request $request, Response $resp
             $db = $db->connect();
             
             //execute statement
-            $sql = "SELECT `a`.*, `u`.`full_name` 
+            $sql = "SELECT `a`.*, `u`.`full_name`, `a`.`pka`, `pka`.`full_name` AS pka_full_name, `a`.`pa`, `pa`.`full_name` AS pa_full_name 
                     FROM `assignment` as `a` 
                     INNER JOIN `user` AS `u` 
                         ON `a`.`user_id` = `u`.`user_id` 
+                    LEFT JOIN `user` AS `pka`
+                        on `a`.`pka` = `pka`.`user_id`
+                    LEFT JOIN `user` AS `pa`
+                        on `a`.`pa` = `pa`.`user_id`
                     WHERE `assignment_id` = :assignment_id";
             
             $stmt = $db->prepare($sql);
@@ -312,10 +329,14 @@ $app->post('/api/assignment/getPDKAssignmentList', function(Request $request, Re
                 $assignment_admin = $stmt->fetch(PDO::FETCH_OBJ);
 
                 if($assignment_admin->exists == "1"){
-                    $sql = "SELECT `a`.`assignment_id`, `a`.`user_id`, `a`.`postcode`, `u`.`full_name`, `a`.`team`, `a`.`address`, `a`.`remark`, `a`.`date`, `a`.`date_extend`
+                    $sql = "SELECT `a`.`assignment_id`, `a`.`user_id`, `a`.`postcode`, `u`.`full_name`, `a`.`team`, `a`.`address`, `a`.`remark`, `a`.`date`, `a`.`date_extend`, `pka`.`full_name` AS pka_full_name, `pa`.`full_name` AS pa_full_name
                             FROM `assignment`  AS `a` 
                             INNER JOIN `user` AS `u` 
                                 ON `a`.`user_id` = `u`.`user_id` 
+                            LEFT JOIN `user` AS `pka`
+                                on `a`.`pka` = `pka`.`user_id`
+                            LEFT JOIN `user` AS `pa`
+                                on `a`.`pa` = `pa`.`user_id`
                             WHERE `a`.`assignment_id`=:assignment_id";
             
                     $stmt = $db->prepare($sql);
