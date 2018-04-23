@@ -16,17 +16,18 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
 
             //prepare state and execute     
             $sql = "INSERT INTO `ind` 
-                        (`assignment_id`, `user_id`, `p_cooperation`, `p_close`, `p_empty`, `p_shortAddr`, `po_name`, `po_id`, `no_familyMember`, `no_fever`, 
-                        `no_out_breeding`, `no_in_breeding`, `container_type`, `no_pot_out_breeding`, `no_pot_in_breeding`, `act_abating`, `act_destroy`, 
+                        (`assignment_id`, `user_id`, `area_inspection`, `p_cooperation`, `p_close`, `p_empty`, `p_shortAddr`, `po_name`, `po_id`, `no_familyMember`, `no_fever`, 
+                        `no_out_breeding`, `no_in_breeding`, `container_type`, `no_pot_out_breeding`, `no_pot_in_breeding`, `abating_measure_type`, `abating_amount`, `act_destroy`, 
                         `act_education`, `act_pamphlet`, `issue_date`, `coor_lat`, `coor_lng`) 
                     VALUES 
-                        (:assignment_id, :user_id, :p_cooperation, :p_close, :p_empty, :p_shortAddr, :po_name, :po_id, :no_familyMember, :no_fever, 
-                        :no_out_breeding, :no_in_breeding, :container_type, :no_pot_out_breeding, :no_pot_in_breeding, :act_abating, :act_destroy, 
+                        (:assignment_id, :user_id, :area_inspection, :p_cooperation, :p_close, :p_empty, :p_shortAddr, :po_name, :po_id, :no_familyMember, :no_fever, 
+                        :no_out_breeding, :no_in_breeding, :container_type, :no_pot_out_breeding, :no_pot_in_breeding, :abating_measure_type, :abating_amount, :act_destroy, 
                         :act_education, :act_pamphlet, CURDATE(), :coor_lat, :coor_lng)";
 
             $stmt = $db->prepare($sql);
             $stmt->bindValue(':assignment_id', $data->data->assignment_id, PDO::PARAM_INT);
-            $stmt->bindValue(':user_id', $data->user_id, PDO::PARAM_INT);            
+            $stmt->bindValue(':user_id', $data->user_id, PDO::PARAM_INT);    
+            $stmt->bindValue(':area_inspection', (int)$data->data->area_inspection, PDO::PARAM_INT);                    
             $stmt->bindValue(':p_cooperation', (int)$data->data->p_cooperation, PDO::PARAM_INT);
             $stmt->bindValue(':p_close', (int)$data->data->p_close, PDO::PARAM_INT);
             $stmt->bindValue(':p_empty', (int)$data->data->p_empty, PDO::PARAM_INT);
@@ -40,7 +41,8 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
             $stmt->bindValue(':container_type', $data->data->container_type, PDO::PARAM_STR);
             $stmt->bindValue(':no_pot_out_breeding', $data->data->no_pot_out_breeding, PDO::PARAM_INT);
             $stmt->bindValue(':no_pot_in_breeding', $data->data->no_pot_in_breeding, PDO::PARAM_INT);
-            $stmt->bindValue(':act_abating', (int)$data->data->act_abating, PDO::PARAM_INT);
+            $stmt->bindValue(':abating_measure_type', (int)$data->data->abating_measure_type, PDO::PARAM_INT);
+            $stmt->bindValue(':abating_amount', $data->data->abating_measure_type);            
             $stmt->bindValue(':act_destroy', (int)$data->data->act_destroy, PDO::PARAM_INT);
             $stmt->bindValue(':act_education', (int)$data->data->act_education, PDO::PARAM_INT);
             $stmt->bindValue(':act_pamphlet', (int)$data->data->act_pamphlet, PDO::PARAM_INT);
@@ -250,9 +252,9 @@ $app->post('/api/ind/get/{id}', function(Request $request, Response $response){
             
             //select from ind table
             $sql = "SELECT 
-                        `i`.`assignment_id`, `i`.`user_id`, `i`.`issue_date`, `i`.`p_cooperation`, `i`.`p_close`, `i`.`p_empty`, `i`.`p_shortAddr`, `i`.`po_name`, `i`.`po_id`, `i`.`no_familyMember`, 
-                        `i`.`no_fever`, `i`.`no_out_breeding`, `i`.`no_in_breeding`, `i`.`container_type`, `i`.`no_pot_out_breeding`, `i`.`no_pot_in_breeding`, `i`.`act_abating`, `i`.`act_destroy`, 
-                        `i`.`act_education`, `i`.`act_pamphlet`, `i`.`coor_lat`, `i`.`coor_lng`, `u`.`full_name`
+                        `i`.`assignment_id`, `i`.`user_id`, `i`.`issue_date`, `i`.`area_inspection`, `i`.`p_cooperation`, `i`.`p_close`, `i`.`p_empty`, `i`.`p_shortAddr`, `i`.`po_name`, `i`.`po_id`, `i`.`no_familyMember`, 
+                        `i`.`no_fever`, `i`.`no_out_breeding`, `i`.`no_in_breeding`, `i`.`container_type`, `i`.`no_pot_out_breeding`, `i`.`no_pot_in_breeding`, `i`.`abating_amount`, 
+                        `i`.`abating_measure_type`, `i`.`act_destroy`, `i`.`act_education`, `i`.`act_pamphlet`, `i`.`coor_lat`, `i`.`coor_lng`, `u`.`full_name`
                     FROM `ind` AS `i`
                     INNER JOIN `user` AS `u` 
                         ON `i`.`user_id` = `u`.`user_id` 

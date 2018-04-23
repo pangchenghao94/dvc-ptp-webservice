@@ -31,5 +31,6 @@ require '../src/routes/assignments.php';
 require '../src/routes/s3.php';
 require '../src/routes/exhibits.php';
 require '../src/routes/inds.php';
+require '../src/routes/reporting.php';
 
 $app->run();

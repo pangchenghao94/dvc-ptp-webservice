@@ -442,13 +442,14 @@ $app->post('/api/ind/update', function(Request $request, Response $response){
             //update InD
             $sql = "UPDATE `ind` 
                     SET 
-                        `p_cooperation` = :p_cooperation, `p_close` = :p_close, `p_empty` = :p_empty, `p_shortAddr` = :p_shortAddr, `po_name` = :po_name, `po_id` = :po_id,
+                        `area_inspection` = :area_inspection, `p_cooperation` = :p_cooperation, `p_close` = :p_close, `p_empty` = :p_empty, `p_shortAddr` = :p_shortAddr, `po_name` = :po_name, `po_id` = :po_id,
                         `no_familyMember` = :no_familyMember,`no_fever` = :no_fever, `no_out_breeding` = :no_out_breeding, `no_in_breeding` = :no_in_breeding, 
-                        `container_type` = :container_type, `no_pot_out_breeding` = :no_pot_out_breeding, `no_pot_in_breeding` = :no_pot_in_breeding, `act_abating` = :act_abating, 
-                        `act_destroy` = :act_destroy, `act_education` = :act_education, `act_pamphlet` = :act_pamphlet, `coor_lat` = :coor_lat, `coor_lng` = :coor_lng
+                        `container_type` = :container_type, `no_pot_out_breeding` = :no_pot_out_breeding, `no_pot_in_breeding` = :no_pot_in_breeding, `abating_amount` = :abating_amount, 
+                        `abating_measure_type` = :abating_measure_type, `act_destroy` = :act_destroy, `act_education` = :act_education, `act_pamphlet` = :act_pamphlet, `coor_lat` = :coor_lat, `coor_lng` = :coor_lng
                     WHERE `ind_id` = :ind_id";
 
             $stmt = $db->prepare($sql);
+            $stmt->bindValue(':area_inspection', (int)$data->data->area_inspection, PDO::PARAM_INT);            
             $stmt->bindValue(':p_cooperation', (int)$data->data->p_cooperation, PDO::PARAM_INT);
             $stmt->bindValue(':p_close', (int)$data->data->p_close, PDO::PARAM_INT);
             $stmt->bindValue(':p_empty', (int)$data->data->p_empty, PDO::PARAM_INT);
@@ -462,7 +463,8 @@ $app->post('/api/ind/update', function(Request $request, Response $response){
             $stmt->bindValue(':container_type', $data->data->container_type, PDO::PARAM_STR);
             $stmt->bindValue(':no_pot_out_breeding', $data->data->no_pot_out_breeding, PDO::PARAM_INT);
             $stmt->bindValue(':no_pot_in_breeding', $data->data->no_pot_in_breeding, PDO::PARAM_INT);
-            $stmt->bindValue(':act_abating', (int)$data->data->act_abating, PDO::PARAM_INT);
+            $stmt->bindValue(':abating_amount', $data->data->abating_amount);
+            $stmt->bindValue(':abating_measure_type', (int)$data->data->abating_measure_type, PDO::PARAM_INT);
             $stmt->bindValue(':act_destroy', (int)$data->data->act_destroy, PDO::PARAM_INT);
             $stmt->bindValue(':act_education', (int)$data->data->act_education, PDO::PARAM_INT);
             $stmt->bindValue(':act_pamphlet', (int)$data->data->act_pamphlet, PDO::PARAM_INT);
@@ -518,8 +520,9 @@ $app->post('/api/ind/update', function(Request $request, Response $response){
                 $stmt->execute();
             }
 
-            $exhibit_id = $data->exhibitData->exhibit_id;
             if(isset($data->exhibitData)){
+                $exhibit_id = $data->exhibitData->exhibit_id;
+
                 //update the exhibit
                 $sql = "UPDATE `exhibit` 
                         SET `po_full_name` = :po_full_name, `po_ic_no` = :po_ic_no, `acceptance` = :acceptance
@@ -533,20 +536,20 @@ $app->post('/api/ind/update', function(Request $request, Response $response){
                 $stmt->bindValue(':exhibit_id', $exhibit_id, PDO::PARAM_INT);                                                                     
 
                 $stmt->execute();
+
+                //delete the folder of exhibit_id
+                $path = "exhibit/{$exhibit_id}/";
+                $result = $s3->deleteMatchingObjects($bucketName, "exhibit/{$exhibit_id}/");     
+
+                //delete exhibit_item rows 
+                $sql = "UPDATE `exhibit_item` 
+                        SET `deleted_date` = NOW() 
+                        WHERE `exhibit_id` = :exhibit_id";
+
+                $stmt = $db->prepare($sql);
+                $stmt->bindValue(':exhibit_id', $exhibit_id, PDO::PARAM_INT);                                                                     
+                $stmt->execute();
             }
-
-            //delete the folder of exhibit_id
-            $path = "exhibit/{$exhibit_id}/";
-            $result = $s3->deleteMatchingObjects($bucketName, "exhibit/{$exhibit_id}/");     
-
-            //delete exhibit_item rows 
-            $sql = "UPDATE `exhibit_item` 
-                    SET `deleted_date` = NOW() 
-                    WHERE `exhibit_id` = :exhibit_id";
-
-            $stmt = $db->prepare($sql);
-            $stmt->bindValue(':exhibit_id', $exhibit_id, PDO::PARAM_INT);                                                                     
-            $stmt->execute();
 
             echo '{ "status"    : "1" }';
         }

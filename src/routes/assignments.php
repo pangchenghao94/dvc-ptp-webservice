@@ -55,7 +55,7 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
             ';
         }
         catch(PDOException $e){
-            echo '{ "error": {"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
 
@@ -136,15 +136,13 @@ $app->post('/api/assignment/update', function(Request $request, Response $respon
             echo '{ "status": "1" }';
         }
         catch(PDOException $e){
-            echo '{ "error": {"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
 
     }
     else{
-        echo '{ "status"    : "0",
-                "message"   : "Unauthorized access!" }
-        ';
+        GenError::unauthorizedAccess();
     }
 });
 
@@ -173,7 +171,7 @@ $app->post('/api/assignment/assignmentList', function(Request $request, Response
             echo json_encode($users);
         }
         catch(PDOException $e){
-            echo '{"error":{"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
     }
@@ -217,7 +215,50 @@ $app->post('/api/assignment/get/{id}', function(Request $request, Response $resp
             ';
         }
         catch(PDOException $e){
-            echo '{"error":{"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
+$app->post('/api/assignment/getListByDate', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            
+            //execute statement
+            $sql = "SELECT `a`.`assignment_id`, `a`.`address`, `a`.`pka`, `pka`.`full_name` AS pka_full_name, `a`.`pa`, `pa`.`full_name` AS pa_full_name 
+                    FROM `assignment` as `a` 
+                    INNER JOIN `user` AS `u` 
+                        ON `a`.`user_id` = `u`.`user_id` 
+                    LEFT JOIN `user` AS `pka`
+                        on `a`.`pka` = `pka`.`user_id`
+                    LEFT JOIN `user` AS `pa`
+                        on `a`.`pa` = `pa`.`user_id`
+                    WHERE `date` = :date";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':date', $data->data->date, PDO::PARAM_STR);            
+            $stmt->execute();
+
+            $assignments = $stmt->fetchAll(PDO::FETCH_OBJ);
+            return $response->withJson([
+                'status' => '1',
+                'data' => $assignments
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
     }
@@ -250,7 +291,7 @@ $app->post('/api/assignment/delete/{id}', function(Request $request, Response $r
             echo '{ "status": "1" }';
         }
         catch(PDOException $e){
-            echo '{ "error": {"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
     }
@@ -292,7 +333,7 @@ $app->post('/api/assignment_admin/getList/{id}', function(Request $request, Resp
                     "data"  : '. $assignment_admin.' }';
         }
         catch(PDOException $e){
-            echo '{"error":{"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
     }
@@ -352,7 +393,7 @@ $app->post('/api/assignment/getPDKAssignmentList', function(Request $request, Re
                 }';
         }
         catch(PDOException $e){
-            echo '{"error":{"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError($e);
         }
         finally{ $db = null; }
     }
