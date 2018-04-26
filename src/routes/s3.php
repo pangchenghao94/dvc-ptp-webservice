@@ -562,3 +562,175 @@ $app->post('/api/ind/update', function(Request $request, Response $response){
         GenError::unauthorizedAccess();
     }
 });
+
+$app->post('/api/upload/daily_report', function(Request $request, Response $response) {
+    $db = new db();
+    $directory = $this->get('upload_directory');
+    $s3 = $this->get('s3');
+    $bucketName = $this->get('bucketName');
+    
+    $user_id    = $request->getParam('user_id');
+    $token      = $request->getParam('token'); 
+    $systemToken= apiToken($user_id);
+    
+    if($token == $systemToken){
+        $files = $request->getUploadedFiles();
+
+        if (empty($files['file'])) {
+            throw new \RuntimeException('Expected a newfile');
+        }
+    
+        $file = $files['file'];
+        $created_date = $request->getParam('created_date');
+
+        if ($file->getError() === UPLOAD_ERR_OK) {
+            $filename = generateFileName($directory, $file);
+            
+            try{
+                $s3->putObject([
+                    'Bucket' => $bucketName,
+                    'Key' => "daily_report/{$created_date}/{$filename}",
+                    'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
+                ]);
+
+                try{
+                    $daily_report_path = $filename;
+                    
+                    //get DB object and connect
+                    $db = $db->connect();
+
+                    //prepare state and execute 
+                    $sql = "INSERT INTO `daily_report`
+                                (`created_date`, `user_id`, `s3_path`) 
+                            VALUES 
+                                (SYSDATE(), :user_id, :s3_path)";
+
+                    $stmt = $db->prepare($sql);
+                    $stmt->bindParam(':s3_path', $daily_report_path, PDO::PARAM_STR);
+                    $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+                    $stmt->execute();      
+
+                    return $response->withJson([
+                        'status' => '1'
+                    ])->withStatus(200);
+                }
+                catch(PDOException $e){
+                    GenError::unexpectedError($e);
+                }
+                finally{ $db = null; }
+            }
+            
+            catch(S3Exception $e){
+                return $response
+                ->withJson([
+                    'status' => '0',
+                    'error' => $e->getMessage()
+                ])
+                ->withStatus(415);
+            }
+        }
+        else{
+            return $response
+                ->withJson([
+                    'status' => '0',
+                    'error' => 'Nothing was uploaded'
+                ])
+                ->withStatus(415);
+        }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
+//update ind and clear exhibit folder in s3
+$app->post('/api/dailyReport/delete', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    $s3 = $this->get('s3');
+    $bucketName = $this->get('bucketName');
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+
+            //prepare state and execute     
+            //update InD
+            $sql = "UPDATE `daily_report` 
+                    SET  `deleted_date` = SYSDATE()
+                    WHERE `daily_report_id` = :daily_report_id";
+
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':daily_report_id', $data->daily_report_id, PDO::PARAM_INT);                                                                     
+            $stmt->execute();
+
+            //delete the report from s3
+            if(!empty($data->s3_path) && !empty($data->created_date)){
+                $path = "daily_report/{$data->created_date}/{$data->s3_path}";
+                $result = $s3->deleteMatchingObjects($bucketName, $path); 
+
+                return $response->withJson([
+                    'status' => '1'
+                ])->withStatus(200);
+            }    
+
+            else{
+                return $response->withJson([
+                    'status' => '0',
+                    'error' => 'nothing was deleted from s3',
+                ])->withStatus(415);
+            }
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});
+
+$app->post('/api/getDailyReport', function(Request $request, Response $response) {
+    $s3 = $this->get('s3');
+    $bucketName = $this->get('bucketName');
+
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            $created_date =  $data->created_date;        
+            $s3_path =  $data->s3_path;                                
+
+            $daily_report_result = $s3->getCommand('GetObject', [
+                'Bucket' => $bucketName,
+                'Key'    => "daily_report/{$created_date}/{$s3_path}",
+                'ResponseContentDisposition' => 'attachment; filename="dailyReport.xlsx"',
+            ]);            
+
+            $daily_report_request = $s3->createPresignedRequest($daily_report_result, '+10 minutes');
+            // Get the actual presigned-url
+            $daily_report_presignedUrl = (string) $daily_report_request->getUri();
+
+            return $response->withJson([
+                'status' => '1',
+                'daily_report_uri' => $daily_report_presignedUrl
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});

@@ -173,3 +173,41 @@ $app->post('/api/dailyReport/get', function(Request $request, Response $response
         GenError::unauthorizedAccess();
     }
 });
+
+//Get ind list by user_id
+$app->post('/api/dailyReport/getList', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+            //execute statement
+            $sql = "SELECT `dr`.*, `u`.`full_name` AS `created_by`
+                    FROM `daily_report` AS `dr`
+                    INNER JOIN `user` AS `u`
+                        ON `dr`.`user_id` = `u`.`user_id`
+                    WHERE `dr`.`deleted_date` IS NULL
+                    ORDER BY `dr`.`created_date` DESC";
+
+            $stmt = $db->query($sql);
+            $reports = $stmt->fetchAll(PDO::FETCH_OBJ);
+
+            return $response->withJson([
+                'status' => '1',
+                'data' => $reports
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+});

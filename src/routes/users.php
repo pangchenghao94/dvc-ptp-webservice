@@ -28,22 +28,24 @@ $app->post('/api/login',function(Request $request, Response $response){
         }
         
         if($userData){
-            $userData = json_encode($userData);
-            echo '{ "status": "1",
-                    "data"  : ' .$userData . ' }
-                ';
+            return $response->withJson([
+                'status' => '1',
+                'data' => $userData
+            ])->withStatus(200);
         } 
         
         else {
-            echo '{ "status"    : "2",
-                    "message"   : "Bad request wrong username and password",
-                }';
+            return $response->withJson([
+                'status' => '2',
+                'message' => "Bad request wrong username and password"
+            ])->withStatus(200);
         }  
     }
     catch(PDOException $e) {
-        echo '{ "status"    : "3",
-                "message"   : '. $e->getMessage() .' }
-        ';
+        return $response->withJson([
+            'status' => '3',
+            'message' => $e->getMessage()
+        ])->withStatus(200);
     }
     finally{ $db = null; }
 });
@@ -251,7 +253,7 @@ $app->post('/api/user/add', function(Request $request, Response $response){
             echo json_encode($users);
         }
         catch(PDOException $e){
-            echo '{ "error": {"text": '.$e->getMessage().'}}';
+            GenError::unexpectedError();
         }
         finally{ $db = null; }
     }
@@ -260,59 +262,90 @@ $app->post('/api/user/add', function(Request $request, Response $response){
     }
 });
 
-//Update user by id
+//Update user by id web
 $app->post('/api/user/update/{id}', function(Request $request, Response $response){
     $db = new db();    
     $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+    $id = $request->getAttribute('id'); 
     
-    try{
-        //get DB object and connect
-        $db = $db->connect();
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
 
-        //prepare state and execute       .
-        $id = $request->getAttribute('id');    
-        $username = $request->getParam('username');
-        $ic_no = $request->getParam('ic_no');        
-        $state = $request->getParam('state');
-        $full_name = $request->getParam('full_name');
-        $phone_no = $request->getParam('phone_no');
-        $email = $request->getParam('email');
-        $gender = $request->getParam('gender');
-        $usertype = $request->getParam('usertype');
+            $sql = "UPDATE `user` SET
+                        `ic_no` = :ic_no, `full_name` = :full_name, `phone_no` = :phone_no, `email` = :email, `gender` = :gender, `usertype` = :usertype       
+                    WHERE `user_id` = :id";
 
-        $sql = "UPDATE `user` SET "
-                    .($username === null? "": "`username` = :username,")
-                    .($ic_no === null? "": "`ic_no` = :ic_no,")                    
-                    .($state === null? "": "`state` = :state,")
-                    .($full_name === null? "": "`full_name` = :full_name,")
-                    .($phone_no === null? "": "`phone_no` = :phone_no,")
-                    .($email === null? "": "`email` = :email,")
-                    .($gender === null? "": "`gender` = :gender,")
-                    .($usertype === null? "": "`usertype` = :usertype,").                
-                " WHERE `user_id` = :id";
-        $pos = strrpos($sql,",");
-        $sql = substr($sql, 0, $pos) . substr($sql, $pos + 1);
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);            
+            $stmt->bindParam(':full_name', $data->full_name, PDO::PARAM_STR);
+            $stmt->bindParam(':phone_no', $data->phone_no, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $data->email, PDO::PARAM_STR);
+            $stmt->bindParam(':gender', $data->gender, PDO::PARAM_INT);
+            $stmt->bindParam(':usertype', $data->usertype, PDO::PARAM_INT);
+            $stmt->bindParam(':ic_no', $data->ic_no, PDO::PARAM_STR);            
 
-        $stmt = $db->prepare($sql);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
 
-        $username   === null? : $stmt->bindParam(':username', $username, PDO::PARAM_STR);
-        $ic_no      === null? : $stmt->bindParam(':ic_no', $ic_no, PDO::PARAM_STR);        
-        $state      === null? : $stmt->bindParam(':state', $state, PDO::PARAM_INT);
-        $full_name  === null? : $stmt->bindParam(':full_name', $full_name, PDO::PARAM_STR);
-        $phone_no   === null? : $stmt->bindParam(':phone_no', $phone_no, PDO::PARAM_STR);
-        $email      === null? : $stmt->bindParam(':email', $email, PDO::PARAM_STR);
-        $gender     === null? : $stmt->bindParam(':gender', $gender, PDO::PARAM_INT);
-        $usertype   === null? : $stmt->bindParam(':usertype', $usertype, PDO::PARAM_INT);
-
-        $stmt->execute();
-
-        echo '{ "message": {"text":"User updated"}}';
+            return $response->withJson([
+                'status' => '1',
+                'message' => 'User has been updated.'
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError();
+        }
+        finally{ $db = null; }
     }
-    catch(PDOException $e){
-        echo '{ "error": {"text": '.$e->getMessage().'}}';
+    else{
+        GenError::unauthorizedAccess();
     }
-    finally{ $db = null; }
+});
+
+//Update user by id web
+$app->post('/api/user/mobileUpdate/{id}', function(Request $request, Response $response){
+    $db = new db();    
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+    $id = $request->getAttribute('id'); 
+    
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+
+            $sql = "UPDATE `user` SET
+                        `full_name` = :full_name, `phone_no` = :phone_no, `email` = :email, `gender` = :gender       
+                    WHERE `user_id` = :id";
+
+            $stmt = $db->prepare($sql);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);            
+            $stmt->bindParam(':full_name', $data->full_name, PDO::PARAM_STR);
+            $stmt->bindParam(':phone_no', $data->phone_no, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $data->email, PDO::PARAM_STR);
+            $stmt->bindParam(':gender', $data->gender, PDO::PARAM_INT);
+
+            $stmt->execute();
+
+            return $response->withJson([
+                'status' => '1',
+                'message' => 'User has been updated.'
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError();
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
 });
 
 //Deactivate user

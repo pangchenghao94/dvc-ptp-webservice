@@ -1,9 +1,15 @@
 <?php 
     class db{
-        // database properties
-        private $dbhost = 'localhost';
-        private $dbuser = 'root';
-        private $dbpass = '';
+        // // database properties - local
+        // private $dbhost = 'localhost';
+        // private $dbuser = 'root';
+        // private $dbpass = '';
+        // private $dbname = 'dvc';
+
+        // database properties - cloud
+        private $dbhost = 'dvc-ptp-instance.cyqqwtd2znsg.ap-southeast-1.rds.amazonaws.com';
+        private $dbuser = 'dvcMaster';
+        private $dbpass = 'dvcMaster123';
         private $dbname = 'dvc';
 
         // Connect
