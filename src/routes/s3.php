@@ -12,18 +12,20 @@ use Aws\Credentials\CredentialProvider;
 //2. remove $provider for aws due to EC2 instance app uses IAM
 
 $container = $app->getContainer();
-$container['upload_directory'] = dirname( __DIR__, 2 ) . '\uploads'; 
-$container['download_directory'] = dirname( __DIR__, 2 ) . '\downloads'; 
+$container['upload_directory'] = dirname( __DIR__, 2 ) . '/uploads'; 
+$container['download_directory'] = dirname( __DIR__, 2 ) . '/downloads'; 
 
 $container['bucketName'] = 'ptp-dvc';
-$provider = CredentialProvider::ini();
+// $provider = CredentialProvider::ini(); //for local
+
 // Cache the results in a memoize function to avoid loading and parsing
 // the ini file on every API operation.
-$provider = CredentialProvider::memoize($provider);
+
+// $provider = CredentialProvider::memoize($provider);  //for local
 $container['s3'] = new S3Client([
     'version' => 'latest',
-    'region'  => 'ap-southeast-1',
-    'credentials' => $provider
+    'region'  => 'ap-southeast-1'
+    // 'credentials' => $provider //for local
 ]);
 
 function generateFileName($directory, $uploadedFile)

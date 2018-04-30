@@ -7,7 +7,7 @@ use \Psr\Http\Message\ResponseInterface as Response;
 // 3 = unexpected error
 $app->post('/api/login',function(Request $request, Response $response){
     $data = json_decode($request->getBody());
-    $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` WHERE `username`=:username AND `password`=:password";
+    $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` WHERE `username`=:username AND `password`=:password AND (`usertype`='2' OR `usertype`='1')";
     $db = new db(); 
     try {
         //get DB object and connect
@@ -432,34 +432,18 @@ $app->post('/api/user/resetPassword', function(Request $request, Response $respo
         try{
             //get DB object and connect
             $db = $db->connect();
+
             //execute statement
-            $sql = "SELECT `password` FROM `user` WHERE `user_id` = :user_id";
-            $stmt = $db->prepare($sql);
-
-            $password = md5($data->data->oldPass); 
-            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
+            $sql = "UPDATE `user` SET `password` = :password WHERE `user_id` = :user_id";
+            $stmt = $db->prepare($sql);   
+            $stmt->bindParam(':user_id', $data->data->user_id, PDO::PARAM_STR);
+            $stmt->bindValue(':password', md5($data->data->password), PDO::PARAM_STR);                                    
             $stmt->execute();
-            $db_pass = $stmt->fetch(PDO::FETCH_OBJ);
-            
-            if(!empty($db_pass)){
-                if($db_pass->password == $password){
-                    $sql = "UPDATE `user` SET `password` = :password WHERE `user_id` = :user_id";
-                    $stmt = $db->prepare($sql);   
-                    $newPass = md5($data->data->newPassRepeat);
-                    $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
-                    $stmt->bindParam(':password', $newPass, PDO::PARAM_STR);                                    
-                    $stmt->execute();
 
-                    echo '{ "status"    : "1",
-                            "message"   : "Update Successfully" }
-                    ';
-                }
-                else{
-                    echo '{ "status"    : "2",
-                            "message"   : "Bad request, you have entered the wrong existing password" }
-                    ';
-                }
-            }
+            return $response->withJson([
+                'status' => '1',
+                'message' => 'Update Successfully'
+            ])->withStatus(200);
         }
         catch(PDOException $e){
             echo '{"error":{"text": '.$e->getMessage().'}}';
@@ -498,12 +482,13 @@ $app->post('/api/user/changePassword', function(Request $request, Response $resp
                     $stmt = $db->prepare($sql);   
                     $newPass = md5($data->data->newPassRepeat);
                     $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_STR);
-                    $stmt->bindParam(':password', $newPass, PDO::PARAM_STR);                                    
+                    $stmt->bindValue(':password', md5($data->data->newPassRepeat), PDO::PARAM_STR);                                    
                     $stmt->execute();
 
-                    echo '{ "status"    : "1",
-                            "message"   : "Update Successfully" }
-                    ';
+                    return $response->withJson([
+                        'status' => '1',
+                        'message' => 'Update Successfully'
+                    ])->withStatus(200);
                 }
                 else{
                     echo '{ "status"    : "2",

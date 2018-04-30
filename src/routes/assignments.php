@@ -21,7 +21,7 @@ $app->post('/api/assignment/add', function(Request $request, Response $response)
             $sql = "INSERT INTO `assignment` 
                     (`user_id`, `team`, `address`, `remark`, `date`, `postcode`, `pka`, `pa`) 
                     VALUES
-                    (:user_id, :team, :address, :remark, :date, :postcode)";
+                    (:user_id, :team, :address, :remark, :date, :postcode, :pka, :pa)";
 
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);
