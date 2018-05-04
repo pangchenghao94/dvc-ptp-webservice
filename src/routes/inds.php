@@ -171,7 +171,7 @@ $app->post('/api/ind/indList_pdk', function(Request $request, Response $response
             $db = $db->connect();
             //execute statement
             $sql = "SELECT `ind_id`, `p_shortAddr`, `po_name`, `last_modified` FROM `ind` 
-                    WHERE `user_id` = :user_id AND `issue_date` = CURDATE()";
+                    WHERE `user_id` = :user_id AND `issue_date` = CURDATE() AND `deleted_date` IS NULL";
 
             $stmt = $db->prepare($sql);
             $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);
@@ -213,6 +213,7 @@ $app->post('/api/ind/indList_web', function(Request $request, Response $response
                         ON `i`.`user_id` = `u`.`user_id`
                     INNER JOIN `assignment` AS `a`
                         ON `i`.`assignment_id` = `a`.`assignment_id`
+                    WHERE `i`.`deleted_date` IS NULL
                     ORDER BY `issue_date` DESC";
 
             $stmt = $db->query($sql);
@@ -334,4 +335,39 @@ $app->post('/api/ind/get/{id}', function(Request $request, Response $response){
     else{
         GenError::unauthorizedAccess();
     }
+});
+
+$app->post('/api/ind/delete/{id}', function(Request $request, Response $response){
+    $db = new db();
+    $data = json_decode($request->getBody());
+    $token = $data->token;
+    $systemToken = apiToken($data->user_id);
+
+    if($token == $systemToken)
+    {
+        try{
+            //get DB object and connect
+            $db = $db->connect();
+
+            //prepare state and execute       .
+            $ind_id = $request->getAttribute('id');    
+            $sql = "UPDATE `ind` SET `deleted_date` = SYSDATE(), `deleted_by` = :user_id WHERE `ind_id` = :ind_id";
+            $stmt = $db->prepare($sql);        
+            $stmt->bindParam(':user_id', $data->user_id, PDO::PARAM_INT);                    
+            $stmt->bindParam(':ind_id', $ind_id, PDO::PARAM_INT);        
+            $stmt->execute();
+
+            return $response->withJson([
+                'status' => '1'
+            ])->withStatus(200);
+        }
+        catch(PDOException $e){
+            GenError::unexpectedError($e);
+        }
+        finally{ $db = null; }
+    }
+    else{
+        GenError::unauthorizedAccess();
+    }
+
 });

@@ -165,7 +165,8 @@ $app->post('/api/assignment/assignmentList', function(Request $request, Response
                         on `a`.`pka` = `pka`.`user_id`
                     LEFT JOIN `user` AS `pa`
                         on `a`.`pa` = `pa`.`user_id`
-                    WHERE `deleted_date` IS NULL";
+                    WHERE `deleted_date` IS NULL
+                    ORDER BY `a`.`date` DESC";
             $stmt = $db->query($sql);
             $users = $stmt->fetchAll(PDO::FETCH_OBJ);
             echo json_encode($users);

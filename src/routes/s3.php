@@ -594,7 +594,7 @@ $app->post('/api/upload/daily_report', function(Request $request, Response $resp
                     'Key' => "daily_report/{$created_date}/{$filename}",
                     'SourceFile' => $directory . DIRECTORY_SEPARATOR . $filename
                 ]);
-
+                unlink($directory . DIRECTORY_SEPARATOR . $filename);
                 try{
                     $daily_report_path = $filename;
                     

@@ -7,7 +7,8 @@ use \Psr\Http\Message\ResponseInterface as Response;
 // 3 = unexpected error
 $app->post('/api/login',function(Request $request, Response $response){
     $data = json_decode($request->getBody());
-    $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` WHERE `username`=:username AND `password`=:password AND (`usertype`='2' OR `usertype`='1')";
+    $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` 
+            WHERE `username`=:username AND `password`=:password AND (`usertype`='2' OR `usertype`='1') AND `state` = '1'";
     $db = new db(); 
     try {
         //get DB object and connect
@@ -56,7 +57,7 @@ $app->post('/api/login',function(Request $request, Response $response){
 $app->post('/api/mobileLogin',function(Request $request, Response $response){
     $data = json_decode($request->getBody());
     $sql = "SELECT `user_id`, `usertype`, `username`, `state` FROM `user` 
-            WHERE `username`=:username AND `password`=:password AND (`usertype`='2' OR `usertype`='3')";
+            WHERE `username`=:username AND `password`=:password AND (`usertype`='2' OR `usertype`='3') AND `state` = '1'";
     $db = new db(); 
     try {
         //get DB object and connect
