@@ -42,7 +42,7 @@ $app->post('/api/ind/add', function(Request $request, Response $response){
             $stmt->bindValue(':no_pot_out_breeding', $data->data->no_pot_out_breeding, PDO::PARAM_INT);
             $stmt->bindValue(':no_pot_in_breeding', $data->data->no_pot_in_breeding, PDO::PARAM_INT);
             $stmt->bindValue(':abating_measure_type', (int)$data->data->abating_measure_type, PDO::PARAM_INT);
-            $stmt->bindValue(':abating_amount', $data->data->abating_measure_type);            
+            $stmt->bindValue(':abating_amount', $data->data->abating_amount);            
             $stmt->bindValue(':act_destroy', (int)$data->data->act_destroy, PDO::PARAM_INT);
             $stmt->bindValue(':act_education', (int)$data->data->act_education, PDO::PARAM_INT);
             $stmt->bindValue(':act_pamphlet', (int)$data->data->act_pamphlet, PDO::PARAM_INT);

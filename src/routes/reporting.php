@@ -19,11 +19,11 @@ $app->post('/api/dailyReport/get', function(Request $request, Response $response
             $sql = "SELECT
                         COUNT(*) AS `total`,
                         `assignment_id`,
-                        SUM(CASE WHEN (`area_inspection` = 0 AND ((`p_cooperation` = 1 AND `p_empty` = 0 AND `p_close` = 0) OR (`p_empty` = 1))) THEN 1 ELSE 0 END ) AS `checked`,
+                        SUM(CASE WHEN `p_close` = 0 THEN 1 ELSE 0 END ) AS `checked`,
                         SUM(CASE WHEN (`area_inspection` = 0 AND `p_close` = 1) THEN 1 ELSE 0 END) `close`,
                         SUM(CASE WHEN (`area_inspection` = 0 AND `p_empty` = 1) THEN 1 ELSE 0 END) `empty`,
                         SUM(CASE WHEN (`area_inspection` = 1) THEN 1 ELSE 0 END) `surrounding`,
-                        SUM(CASE WHEN (`area_inspection` = 0) THEN 1 ELSE 0 END) `visited`,
+                        SUM(CASE WHEN 1 THEN 1 ELSE 0 END) `visited`,
                         SUM(EXISTS (SELECT * FROM `exhibit` WHERE `ind`.`ind_id` = `exhibit`.`ind_id`)) `premise_positive_compound`,
                         SUM(CASE 
                                 WHEN 
@@ -39,7 +39,7 @@ $app->post('/api/dailyReport/get', function(Request $request, Response $response
                                     (`no_out_breeding` > 0 OR `no_in_breeding` > 0) 
                                 THEN (`no_out_breeding` + `no_in_breeding`) ELSE 0 END
                             ) `container_positive_surrounding`,
-                        SUM(`no_out_breeding` + `no_in_breeding`) `total_breeding`,
+                        SUM(CASE WHEN `no_in_breeding` > 0 OR `no_out_breeding` > 0 THEN 1 ELSE 0 END) `total_breeding`,
                         SUM(`no_pot_out_breeding` + `no_pot_in_breeding`) `total_pot_breeding`,
                         SUM(CASE WHEN NOT(`abating_amount` = 0) THEN 1 ELSE 0 END) `total_abating`,                        
                         SUM(CASE WHEN (NOT(`abating_amount` = 0) AND `abating_measure_type` = 0) THEN `abating_amount` ELSE 0 END) `abating_amount_g`,
